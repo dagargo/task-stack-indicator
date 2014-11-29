@@ -1,30 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012 David García Goñi
+# Copyright 2014 David García Goñi
 #
-# This program is free software: you can redistribute it and/or modify it
-# under the terms of either or both of the following licenses:
-#
-# 1) the GNU Lesser General Public License version 3, as published by the
-# Free Software Foundation; and/or
-# 2) the GNU Lesser General Public License version 2.1, as published by
-# the Free Software Foundation.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranties of
-# MERCHANTABILITY, SATISFACTORY QUALITY or FITNESS FOR A PARTICULAR
-# PURPOSE.  See the applicable version of the GNU Lesser General Public
-# License for more details.
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# You should have received a copy of both the GNU Lesser General Public
-# License version 3 and version 2.1 along with this program.  If not, see
-# <http://www.gnu.org/licenses>
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-
-# http://developer.ubuntu.com/resources/technologies/application-indicators/
-#
-
 import gtk
 import appindicator
 import threading
@@ -42,27 +33,44 @@ class TaskStackIndicator(threading.Thread):
     DIR = expanduser("~") + "/.TaskStackIndicator"
     CONFIG_FILE = DIR + "/config"
     DATA_FILE = DIR + "/tasks"
+    IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
+    WATCHED_JQL = "watcher = currentUser() AND updatedDate > -%dd ORDER BY updatedDate DESC"
 
     def __init__(self):
-        # icons taken from /usr/share/icons/ubuntu-mono-dark/*
+        if not os.path.exists(TaskStackIndicator.DIR):
+            os.makedirs(TaskStackIndicator.DIR)
+
         self.indicator = appindicator.Indicator("task-stack-indicator",
                                                 "level0",
-                                                appindicator.CATEGORY_OTHER,
-                                                os.path.dirname(os.path.realpath(__file__)))
+                                                appindicator.CATEGORY_OTHER)
         self.indicator.set_status(appindicator.STATUS_ACTIVE)
 
         self.menu = gtk.Menu()
         self.indicator.set_menu(self.menu)
+        self.pixbuf_url_factory = PixbufUrlFactory()
         self.load_config()
         self.load_tasks()
         self.update_menu(None)
+        self.indicator.connect("new-icon", self.reload_menu)
+
+    def load_config(self):
+        fd = open(TaskStackIndicator.CONFIG_FILE, 'a+')
+        try:
+            self.config = json.loads(fd.read())
+        except ValueError as e:
+            self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
+            self.save_config()
+        else:
+            fd.close()
+
+    def load_all(self):
+        self.load_tasks()
+        self.load_in_progress_issues()
+        self.load_watched_issues()
 
     def load_tasks(self):
         self.in_progress = []
         self.watched = []
-        if not os.path.exists(TaskStackIndicator.DIR):
-            os.makedirs(TaskStackIndicator.DIR)
-        
         fd = open(TaskStackIndicator.DATA_FILE, 'a+')
         try:
             self.tasks = json.loads(fd.read())
@@ -70,55 +78,37 @@ class TaskStackIndicator(threading.Thread):
             self.tasks = { "nextTaskId" : 0, "tasks" : []}
         else:
             fd.close()
-    
-    def load_config(self):
-        self.jira_icons = {}
-        fd = open(TaskStackIndicator.CONFIG_FILE, 'a+')
-        try:
-            config = json.loads(fd.read())
-            self.jira_url = config.get("jira_url")
-            if not self.jira_url.endswith("/"):
-                self.jira_url = self.jira_url + "/"
-            self.username = config.get("username")
-            self.password = config.get("password")
-            self.refresh = config.get("refresh") * 60 # We use it in seconds
-            self.window = config.get("window")
-        except ValueError as e:
-            self.jira_url = None
-        else:
-            fd.close()
-
-    def load_all_issues(self):
-        self.load_in_progress_issues()
-        self.load_watched_issues()
 
     def load_in_progress_issues(self):
-        self.in_progress = self.load_jira_issues("assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC")
+        self.in_progress = self.load_jira_issues(TaskStackIndicator.IN_PROGRES_JQL)
 
     def load_watched_issues(self):
-        self.watched = self.load_jira_issues("watcher = currentUser() AND updatedDate > -%dd AND type = Task ORDER BY updatedDate DESC" % (self.window,))
+        window = self.config.get("window")
+        self.watched = self.load_jira_issues(TaskStackIndicator.WATCHED_JQL % (window,))
         
     def load_jira_issues(self, jql):
         issues = []
-        if self.jira_url:
-            jql_url = self.jira_url + "/rest/api/2/search?jql=" + jql
-            response = requests.get(jql_url, auth=(self.username, self.password))
+        jira_url = self.config.get("jira_url")
+        if jira_url:
+            jql_url = jira_url + "/rest/api/2/search?jql=" + jql
+            username = self.config.get("username")
+            password = self.config.get("password")
+            response = requests.get(jql_url, auth=(username, password))
             for issue in json.loads(response.text).get("issues"):
-                icon_url = issue.get("fields").get("priority").get("iconUrl")
-                icon_id = issue.get("fields").get("priority").get("id")
-                image = self.jira_icons.get(icon_id)
-                if not image:           
-                    imgResponse = urllib2.urlopen(icon_url)
-                    loader = gtk.gdk.PixbufLoader()
-                    loader.write(imgResponse.read())
-                    loader.close()
-                    image = gtk.Image()
-                    image.set_from_pixbuf(loader.get_pixbuf())
-                    self.jira_icons[icon_id] = image
-                    
-                summary = issue.get("fields").get("summary")
-                url = self.jira_url + "browse/" + issue.get("key")
-                issues.append({"image": image, "summary" : summary, "data" : url})
+                fields = issue.get("fields")
+                priority = fields.get("priority")
+                if priority:
+                    icon_url = priority.get("iconUrl")
+                else:
+                    issue_type = fields.get("issuetype")
+                    if issue_type:
+                        icon_url = issue_type.get("iconUrl")
+                    else:
+                        icon_url = None
+                summary = fields.get("summary")
+                url = jira_url + "browse/" + issue.get("key")
+                issue = {"image_url": icon_url, "summary" : summary, "data" : url}
+                issues.append(issue)
         return issues
 
     def update_menu(self, widget):
@@ -135,13 +125,13 @@ class TaskStackIndicator(threading.Thread):
         self.menu.append(menuItem)
 
         menuItem = gtk.ImageMenuItem(stock_id=gtk.STOCK_REFRESH)
-        menuItem.connect("activate", self.reload_jira_issues_in_background)
+        menuItem.connect("activate", self.load_all_in_background, None)
         menuItem.show()
         self.menu.append(menuItem)
 
-        menuItem = gtk.SeparatorMenuItem()
-        menuItem.show()
-        self.menu.append(menuItem)
+        separator = gtk.SeparatorMenuItem()
+        separator.show()
+        self.menu.append(separator)
 
         menuItem = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
         menuItem.connect("activate", self.exit)
@@ -151,11 +141,24 @@ class TaskStackIndicator(threading.Thread):
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
         self.indicator.set_icon("level%d" % total)
 
+    def reload_menu(self, widget):
+        gobject.idle_add(self.update_menu, None)
+
+    def open_url(self, widget, url):
+        webbrowser.open_new_tab(url)
+
     def add_issues_list_to_menu(self, tasks, callback):
         if tasks:
             for task in tasks:
                 menuItem = gtk.ImageMenuItem(task.get("summary"))
-                menuItem.set_image(task.get("image"))
+                image_url = task.get("image_url")
+                if image_url:
+                    pixbuf = self.pixbuf_url_factory.get(image_url)
+                else:
+                    pixbuf = gtk.icon_theme_get_default().load_icon("tomboy-panel", 22, gtk.ICON_LOOKUP_FORCE_SVG)
+                image = gtk.Image()
+                image.set_from_pixbuf(pixbuf)
+                menuItem.set_image(image)
                 menuItem.set_always_show_image(True);
                 menuItem.connect("activate", callback, task.get("data"))
                 menuItem.show()
@@ -165,9 +168,6 @@ class TaskStackIndicator(threading.Thread):
             menuItem.show()
             self.menu.append(menuItem)
 
-    def open_url(self, widget, url):
-        webbrowser.open_new_tab(url)
-
     def delete_task(self, widget, task_id):
         for task in self.tasks.get("tasks"):
             if task.get("data") == task_id:
@@ -175,32 +175,31 @@ class TaskStackIndicator(threading.Thread):
                 break
         gobject.idle_add(self.update_menu, None)
 
-    def reload_jira_issues_in_background(self, widget):
-        try:
-            threading.Thread(target=self.reload_jira_issues).start()
-        except ValueError as e:
-           print "Error in thread"
+    def load_all_in_background(self, widget):
+        threading.Thread(target=self.load_all_and_update_menu).start()
 
-    def reload_jira_issues(self):
-        self.load_all_issues()
+    def load_all_and_update_menu(self):
+        self.load_all()
         gobject.idle_add(self.update_menu, None)
 
-    def load_jira_issues_periodically(self):
-        self.reload_jira_issues_in_background(None)
-        self.timer = threading.Timer(300, self.load_jira_issues_periodically)
+    def load_all_periodically(self):
+        self.load_all_in_background(None)
+        seconds = self.config.get("refresh") * 60
+        self.timer = threading.Timer(seconds, self.load_all_periodically)
         self.timer.start()
         
     def add_task(self, widget):
         summary = self.get_task_summary("Name")
         if summary != None:
-            next_task_id = self.tasks.get("nextTaskId")
-            task = {"image": None, "summary" : summary, "data" : next_task_id}
-            self.tasks["nextTaskId"] = next_task_id + 1
+            task_id = self.tasks.get("nextTaskId")
+            task = {"image_url": None, "summary" : summary, "data" : task_id}
+            self.tasks["nextTaskId"] = task_id + 1
             self.tasks.get("tasks").append(task)
             gobject.idle_add(self.update_menu, None)
+            self.save_tasks()
 
     def get_task_summary(self, widget):
-        dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_QUESTION, gtk.BUTTONS_OK_CANCEL, "Tarea")
+        dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_QUESTION, gtk.BUTTONS_OK_CANCEL, "Task")
         entry = gtk.Entry()
         dialog.vbox.pack_end(entry)
         entry.show()
@@ -214,17 +213,40 @@ class TaskStackIndicator(threading.Thread):
         else:
             return None
 
-    def exit(self, widget):
+    def save_tasks(self):
         fd = open(TaskStackIndicator.DATA_FILE, 'w')
         fd.write(json.dumps(self.tasks))
         fd.close()
+        
+    def save_config(self):
+        fd = open(TaskStackIndicator.CONFIG_FILE, 'w')
+        fd.write(json.dumps(self.config))
+        fd.close()
+
+    def exit(self, widget):
         self.timer.cancel()
         gtk.main_quit()
 
     def main(self):
         gobject.threads_init()
-        self.load_jira_issues_periodically()
+        self.load_all_periodically()
         gtk.main()
+
+class PixbufUrlFactory:
+
+    def __init__(self):
+        self.pixbufs = {}
+        
+    def get(self, image_url):
+        pixbuf = self.pixbufs.get(image_url)
+        if not pixbuf:
+            imgResponse = urllib2.urlopen(image_url)
+            loader = gtk.gdk.PixbufLoader()
+            loader.write(imgResponse.read())
+            loader.close()
+            pixbuf = loader.get_pixbuf()
+            self.pixbufs[image_url] = pixbuf
+        return pixbuf
 
 if __name__ == "__main__":
     indicator = TaskStackIndicator()

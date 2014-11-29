@@ -14,4 +14,4 @@ deinstall:
 	gtk-update-icon-cache /usr/share/icons/Humanity
 
 clean:
-	rm *~
+	rm -f *~
