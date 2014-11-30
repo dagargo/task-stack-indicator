@@ -172,6 +172,10 @@
       <object class="GtkBox" id="box2">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="margin_left">6</property>
+        <property name="margin_right">6</property>
+        <property name="margin_top">6</property>
+        <property name="margin_bottom">6</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkGrid" id="grid2">
@@ -195,6 +199,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
+                <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="summary">Summary</property>
                 <property name="angle">0.02</property>
               </object>
@@ -214,7 +219,7 @@
           <object class="GtkButtonBox" id="buttonbox2">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="spacing">5</property>
+            <property name="spacing">6</property>
             <property name="layout_style">end</property>
             <child>
               <object class="GtkButton" id="task_cancel_button">
@@ -231,6 +236,20 @@
               </packing>
             </child>
             <child>
+              <object class="GtkButton" id="task_delete_button">
+                <property name="label">gtk-delete</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="task_accept_button">
                 <property name="label">gtk-ok</property>
                 <property name="visible">True</property>
@@ -241,7 +260,7 @@
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">1</property>
+                <property name="position">2</property>
               </packing>
             </child>
           </object>

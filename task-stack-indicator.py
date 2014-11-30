@@ -40,9 +40,6 @@ class TaskStackIndicator():
     ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
 
     def __init__(self):
-        if not os.path.exists(TaskStackIndicator.DIR):
-            os.makedirs(TaskStackIndicator.DIR)
-
         self.indicator = AppIndicator.Indicator.new("task-stack-indicator",
                                                 "level0",
                                                 AppIndicator.IndicatorCategory.OTHER)
@@ -51,14 +48,16 @@ class TaskStackIndicator():
         self.load_config()
         self.load_tasks()
         self.update_menu()
+        self.indicator.connect("new-icon", lambda i: self.update_menu())
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
         self.pool_manager = urllib3.PoolManager()
         self.pixbuf_url_factory = PixbufUrlFactory(self.pool_manager)
-        self.indicator.connect("new-icon", lambda w: self.update_menu(w))
 
     def load_config(self):
+        if not os.path.exists(TaskStackIndicator.DIR):
+            os.makedirs(TaskStackIndicator.DIR)
         file = open(TaskStackIndicator.CONFIG_FILE, 'r')
         try:
             self.config = json.loads(file.read())
@@ -148,10 +147,10 @@ class TaskStackIndicator():
         menuItem.show()
         menu.append(menuItem)
 
+        self.indicator.set_menu(menu)
+
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
         self.indicator.set_icon("level%d" % total)
-        
-        self.indicator.set_menu(menu)
 
     def open_url(self, widget, url):
         webbrowser.open_new_tab(url)
@@ -225,6 +224,8 @@ class TaskStackIndicator():
 
     def add_task(self, widget):
         (builder, window, accept_button, summary_entry) = self.create_task_window_builder()
+        delete_button = builder.get_object("task_delete_button")
+        delete_button.hide()
         accept_button.connect("clicked", self.create_task, window, summary_entry)
         window.show()
 
@@ -238,6 +239,8 @@ class TaskStackIndicator():
             (builder, window, accept_button, summary_entry) = self.create_task_window_builder()  
             summary_entry.set_text(task.get("summary"))
             accept_button.connect("clicked", self.update_task, window, summary_entry, task)
+            delete_button = builder.get_object("task_delete_button")
+            delete_button.connect("clicked", self.delete_task, window, task)
             window.show()
         else:
             print("Warning!")
@@ -264,6 +267,12 @@ class TaskStackIndicator():
             self.update_menu()
             self.save_tasks()
         task_window.hide()
+        
+    def delete_task(self, widget, window, task):
+        self.tasks.get("tasks").remove(task)
+        self.update_menu()
+        self.save_tasks()
+        window.hide()
 
     def save_tasks(self):
         fd = open(TaskStackIndicator.DATA_FILE, 'w')
