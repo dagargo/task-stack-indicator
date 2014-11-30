@@ -47,8 +47,8 @@ class TaskStackIndicator():
 
         self.load_config()
         self.load_tasks()
-        self.update_menu()
-        self.indicator.connect("new-icon", lambda i: self.update_menu())
+        self.update_icon_and_menu()
+        self.indicator.connect("new-icon", lambda i: self.update_icon_and_menu())
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
@@ -116,41 +116,44 @@ class TaskStackIndicator():
                 issues.append(issue)
         return issues
 
-    def update_menu(self):
-        menu = Gtk.Menu()
-
-        self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
-        self.add_issues_list_to_menu(menu, self.in_progress, self.open_url)
-        self.add_issues_list_to_menu(menu, self.watched, self.open_url)
-
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
-        menuItem.connect("activate", self.add_task)
-        menuItem.show()
-        menu.append(menuItem)
-
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
-        menuItem.connect("activate", lambda w: self.load_all_in_background(w))
-        menuItem.show()
-        menu.append(menuItem)
-
-        #menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
-        #menuItem.connect("activate", self.configure)
-        #menuItem.show()
-        #menu.append(menuItem)
-
-        separator = Gtk.SeparatorMenuItem()
-        separator.show()
-        menu.append(separator)
-
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
-        menuItem.connect("activate", self.exit)
-        menuItem.show()
-        menu.append(menuItem)
-
-        self.indicator.set_menu(menu)
-
+    def update_icon_and_menu(self):
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
-        self.indicator.set_icon("level%d" % total)
+        icon = "level%d" % total
+        if icon != self.indicator.get_icon():
+            self.indicator.set_icon(icon)
+        else:
+            print("Updating menu...")
+            menu = Gtk.Menu()
+
+            self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
+            self.add_issues_list_to_menu(menu, self.in_progress, self.open_url)
+            self.add_issues_list_to_menu(menu, self.watched, self.open_url)
+
+            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
+            menuItem.connect("activate", self.add_task)
+            menuItem.show()
+            menu.append(menuItem)
+
+            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
+            menuItem.connect("activate", lambda w: self.load_all_in_background(w))
+            menuItem.show()
+            menu.append(menuItem)
+
+            #menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
+            #menuItem.connect("activate", self.configure)
+            #menuItem.show()
+            #menu.append(menuItem)
+
+            separator = Gtk.SeparatorMenuItem()
+            separator.show()
+            menu.append(separator)
+
+            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
+            menuItem.connect("activate", self.exit)
+            menuItem.show()
+            menu.append(menuItem)
+
+            self.indicator.set_menu(menu)
 
     def open_url(self, widget, url):
         webbrowser.open_new_tab(url)
@@ -180,12 +183,12 @@ class TaskStackIndicator():
         print("Configuring...")
 
     def load_all_in_background(self, widget):
-        threading.Thread(target=self.load_all_and_update_menu).start()
+        threading.Thread(target=self.load_all_and_update_icon_and_menu).start()
 
-    def load_all_and_update_menu(self):
+    def load_all_and_update_icon_and_menu(self):
         self.load_config()
         self.load_all()
-        GObject.idle_add(self.update_menu)
+        GObject.idle_add(self.update_icon_and_menu)
 
     def load_all_periodically(self):
         self.load_all_in_background(None)
@@ -254,7 +257,7 @@ class TaskStackIndicator():
             task = {"image_url": None, "summary" : summary, "data" : task_id}
             self.tasks["nextTaskId"] = task_id + 1
             self.tasks.get("tasks").append(task)
-            self.update_menu()
+            self.update_icon_and_menu()
             self.save_tasks()
         task_window.hide()
 
@@ -264,13 +267,13 @@ class TaskStackIndicator():
             print("Warning!")
         else:
             task["summary"] = summary
-            self.update_menu()
+            self.update_icon_and_menu()
             self.save_tasks()
         task_window.hide()
         
     def delete_task(self, widget, window, task):
         self.tasks.get("tasks").remove(task)
-        self.update_menu()
+        self.update_icon_and_menu()
         self.save_tasks()
         window.hide()
 

@@ -11,6 +11,10 @@
       <object class="GtkBox" id="box1">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="margin_left">12</property>
+        <property name="margin_right">12</property>
+        <property name="margin_top">12</property>
+        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkGrid" id="grid1">
@@ -18,11 +22,13 @@
             <property name="can_focus">False</property>
             <property name="valign">start</property>
             <property name="vexpand">True</property>
+            <property name="row_spacing">6</property>
             <child>
               <object class="GtkLabel" id="label1">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
+                <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="jira_url">Jira URL</property>
               </object>
               <packing>
@@ -35,6 +41,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
+                <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="password">Password</property>
                 <property name="justify">center</property>
               </object>
@@ -48,6 +55,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
+                <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="refresh_period">Refresh period</property>
                 <property name="justify">center</property>
               </object>
@@ -104,6 +112,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
+                <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="username">Username</property>
               </object>
               <packing>
@@ -122,7 +131,8 @@
           <object class="GtkButtonBox" id="buttonbox1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="spacing">5</property>
+            <property name="margin_top">12</property>
+            <property name="spacing">6</property>
             <property name="layout_style">end</property>
             <child>
               <object class="GtkButton" id="config_cancel_button">
@@ -156,7 +166,6 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="padding">5</property>
             <property name="position">1</property>
           </packing>
         </child>
@@ -172,10 +181,10 @@
       <object class="GtkBox" id="box2">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">6</property>
-        <property name="margin_right">6</property>
-        <property name="margin_top">6</property>
-        <property name="margin_bottom">6</property>
+        <property name="margin_left">12</property>
+        <property name="margin_right">12</property>
+        <property name="margin_top">12</property>
+        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkGrid" id="grid2">
@@ -219,6 +228,7 @@
           <object class="GtkButtonBox" id="buttonbox2">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_top">12</property>
             <property name="spacing">6</property>
             <property name="layout_style">end</property>
             <child>
@@ -267,7 +277,6 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="padding">5</property>
             <property name="position">1</property>
           </packing>
         </child>
