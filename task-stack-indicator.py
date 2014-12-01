@@ -47,8 +47,8 @@ class TaskStackIndicator():
 
         self.load_config()
         self.load_tasks()
+        self.indicator.connect("new-icon", lambda i: self.update_menu())
         self.update_icon_and_menu()
-        self.indicator.connect("new-icon", lambda i: self.update_icon_and_menu())
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
@@ -58,10 +58,10 @@ class TaskStackIndicator():
     def load_config(self):
         if not os.path.exists(TaskStackIndicator.DIR):
             os.makedirs(TaskStackIndicator.DIR)
-        file = open(TaskStackIndicator.CONFIG_FILE, 'r')
         try:
+            file = open(TaskStackIndicator.CONFIG_FILE, 'r')
             self.config = json.loads(file.read())
-        except ValueError as e:
+        except IOError as e:
             self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
             self.save_config()
         else:
@@ -75,11 +75,12 @@ class TaskStackIndicator():
     def load_tasks(self):
         self.in_progress = []
         self.watched = []
-        file = open(TaskStackIndicator.DATA_FILE, 'r')
         try:
+            file = open(TaskStackIndicator.DATA_FILE, 'r')
             self.tasks = json.loads(file.read())
-        except ValueError as e:
+        except IOError as e:
             self.tasks = { "nextTaskId" : 0, "tasks" : []}
+            self.save_tasks()
         else:
             file.close()
 
@@ -120,40 +121,44 @@ class TaskStackIndicator():
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
         icon = "level%d" % total
         if icon != self.indicator.get_icon():
+            #This will trigger a call to update_menu
             self.indicator.set_icon(icon)
         else:
-            print("Updating menu...")
-            menu = Gtk.Menu()
+            self.update_menu()
+            
+    def update_menu(self):
+        print("Updating menu...")
+        menu = Gtk.Menu()
 
-            self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
-            self.add_issues_list_to_menu(menu, self.in_progress, self.open_url)
-            self.add_issues_list_to_menu(menu, self.watched, self.open_url)
+        self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
+        self.add_issues_list_to_menu(menu, self.in_progress, self.open_url)
+        self.add_issues_list_to_menu(menu, self.watched, self.open_url)
 
-            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
-            menuItem.connect("activate", self.add_task)
-            menuItem.show()
-            menu.append(menuItem)
+        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
+        menuItem.connect("activate", self.add_task)
+        menuItem.show()
+        menu.append(menuItem)
 
-            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
-            menuItem.connect("activate", lambda w: self.load_all_in_background(w))
-            menuItem.show()
-            menu.append(menuItem)
+        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
+        menuItem.connect("activate", lambda w: self.load_all_in_background(w))
+        menuItem.show()
+        menu.append(menuItem)
 
-            #menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
-            #menuItem.connect("activate", self.configure)
-            #menuItem.show()
-            #menu.append(menuItem)
+        #menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
+        #menuItem.connect("activate", self.configure)
+        #menuItem.show()
+        #menu.append(menuItem)
 
-            separator = Gtk.SeparatorMenuItem()
-            separator.show()
-            menu.append(separator)
+        separator = Gtk.SeparatorMenuItem()
+        separator.show()
+        menu.append(separator)
 
-            menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
-            menuItem.connect("activate", self.exit)
-            menuItem.show()
-            menu.append(menuItem)
+        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
+        menuItem.connect("activate", self.exit)
+        menuItem.show()
+        menu.append(menuItem)
 
-            self.indicator.set_menu(menu)
+        self.indicator.set_menu(menu)
 
     def open_url(self, widget, url):
         webbrowser.open_new_tab(url)
