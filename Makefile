@@ -18,3 +18,4 @@ uninstall:
 
 clean:
 	rm -f *~
+	rm -f \#*

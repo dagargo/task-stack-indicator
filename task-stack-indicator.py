@@ -24,7 +24,6 @@ import json
 import os
 import requests
 import webbrowser
-import urllib3
 import urllib
 import threading
 from os.path import expanduser
@@ -47,13 +46,12 @@ class TaskStackIndicator():
 
         self.load_config()
         self.load_tasks()
-        self.indicator.connect("new-icon", lambda i: self.update_menu())
+        self.indicator.connect("new-icon", lambda indicator: self.update_menu())
         self.update_icon_and_menu()
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
-        self.pool_manager = urllib3.PoolManager()
-        self.pixbuf_url_factory = PixbufUrlFactory(self.pool_manager)
+        self.pixbuf_url_factory = PixbufUrlFactory()
 
     def load_config(self):
         if not os.path.exists(TaskStackIndicator.DIR):
@@ -95,12 +93,10 @@ class TaskStackIndicator():
         issues = []
         jira_url = self.config.get("jira_url")
         if jira_url:
-            jql_url = jira_url + "/rest/api/2/search?jql=" + urllib.parse.quote(jql)
-            basic_auth = self.config.get("username") + ":" + self.config.get("password")
-            headers = urllib3.util.make_headers(basic_auth=basic_auth)
-            response = self.pool_manager.request('GET', jql_url, headers=headers)
-            data = response.data.decode('utf8')
-            for issue in json.loads(data).get("issues"):
+            jql_url = jira_url + "/rest/api/2/search?jql=" + jql
+            auth = (self.config.get("username"), self.config.get("password"))
+            response = requests.get(jql_url, auth=auth)
+            for issue in response.json().get("issues"):
                 fields = issue.get("fields")
                 priority = fields.get("priority")
                 if priority:
@@ -127,7 +123,6 @@ class TaskStackIndicator():
             self.update_menu()
             
     def update_menu(self):
-        print("Updating menu...")
         menu = Gtk.Menu()
 
         self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
@@ -144,10 +139,10 @@ class TaskStackIndicator():
         menuItem.show()
         menu.append(menuItem)
 
-        #menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
-        #menuItem.connect("activate", self.configure)
-        #menuItem.show()
-        #menu.append(menuItem)
+        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
+        menuItem.connect("activate", self.configure)
+        menuItem.show()
+        menu.append(menuItem)
 
         separator = Gtk.SeparatorMenuItem()
         separator.show()
@@ -204,31 +199,54 @@ class TaskStackIndicator():
     def configure(self, widget):
         builder = Gtk.Builder()
         builder.add_from_string(self.glade_contents)
-        config_window = builder.get_object("config_window")
-        config_window.connect("delete-event", lambda w, e: w.hide() or True)
-        config_window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
-        config_window.set_position(Gtk.WindowPosition.CENTER)
-        config_cancel_button = builder.get_object("config_cancel_button")
-        config_cancel_button.connect("clicked", lambda e: config_window.hide())
-        config_accept_button = builder.get_object("config_accept_button")
-        config_accept_button.connect("clicked", lambda e: self.save_config(builder))
-        config_window.show()
+        window = builder.get_object("config_window")
+        window.connect("delete-event", lambda widget, event: widget.hide() or True)
+        window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
+        window.set_position(Gtk.WindowPosition.CENTER)
+        cancel_button = builder.get_object("config_cancel_button")
+        cancel_button.connect("clicked", lambda event: window.hide())
+        accept_button = builder.get_object("config_accept_button")
+        entry_jira_url = builder.get_object("jira_url")
+        entry_jira_url.set_text(self.config["jira_url"])
+        entry_username = builder.get_object("username")
+        entry_username.set_text(self.config["username"])
+        entry_password = builder.get_object("password")
+        entry_password.set_text(self.config["password"])
+        spin_refresh = builder.get_object("refresh")
+        spin_refresh.set_value(self.config["refresh"])
+        spin_window = builder.get_object("window")
+        spin_window.set_value(self.config["window"])
+        accept_button.connect("clicked", self.save_configuration, window, entry_jira_url, entry_username, entry_password, spin_refresh, spin_window)
+        window.show()
 
-    def save_config(self, builder):
-        print("Saving config...")
+    def save_configuration(self, accept_button, window, entry_jira_url, entry_username, entry_password, spin_refresh, spin_window):
+        self.config["jira_url"] = entry_jira_url.get_text()
+        self.config["username"] = entry_username.get_text()
+        self.config["password"] = entry_password.get_text()
+        self.config["refresh"] = int(spin_refresh.get_value())
+        self.config["window"] = int(spin_window.get_value())
+        self.save_config()
+        window.hide()
 
     def create_task_window_builder(self):
         builder = Gtk.Builder()
         builder.add_from_string(self.glade_contents)
-        task_window = builder.get_object("task_window")
-        task_window.connect("delete-event", lambda w, e: w.hide() or True)
-        task_window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
-        task_window.set_position(Gtk.WindowPosition.CENTER)
-        task_cancel_button = builder.get_object("task_cancel_button")
-        task_cancel_button.connect("clicked", lambda e: task_window.hide())
-        task_accept_button = builder.get_object("task_accept_button")
-        task_summary_entry = builder.get_object("task_summary")      
-        return (builder, task_window, task_accept_button, task_summary_entry)
+        window = builder.get_object("task_window")
+        window.connect("delete-event", lambda widget, event: widget.hide() or True)
+        window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
+        window.set_position(Gtk.WindowPosition.CENTER)
+        cancel_button = builder.get_object("task_cancel_button")
+        cancel_button.connect("clicked", lambda event: window.hide())
+        accept_button = builder.get_object("task_accept_button")
+        accept_button.set_can_default(True)
+        accept_button.grab_default()
+        summary_entry = builder.get_object("task_summary")
+        summary_entry.set_activates_default(True)
+        summary_entry.connect("changed", self.enable_accept_on_text_change, accept_button)
+        return (builder, window, accept_button, summary_entry)
+
+    def enable_accept_on_text_change(self, editable, accept_button):
+        accept_button.set_sensitive(editable.get_text() != "")
 
     def add_task(self, widget):
         (builder, window, accept_button, summary_entry) = self.create_task_window_builder()
@@ -262,8 +280,8 @@ class TaskStackIndicator():
             task = {"image_url": None, "summary" : summary, "data" : task_id}
             self.tasks["nextTaskId"] = task_id + 1
             self.tasks.get("tasks").append(task)
-            self.update_icon_and_menu()
             self.save_tasks()
+            GObject.idle_add(self.update_icon_and_menu)
         task_window.hide()
 
     def update_task(self, widget, task_window, task_summary_entry, task):
@@ -272,8 +290,8 @@ class TaskStackIndicator():
             print("Warning!")
         else:
             task["summary"] = summary
-            self.update_icon_and_menu()
             self.save_tasks()
+            GObject.idle_add(self.update_icon_and_menu)
         task_window.hide()
         
     def delete_task(self, widget, window, task):
@@ -303,16 +321,15 @@ class TaskStackIndicator():
 
 class PixbufUrlFactory:
 
-    def __init__(self, pool_manager):
+    def __init__(self):
         self.pixbufs = {}
-        self.pool_manager = pool_manager
         
     def get(self, image_url):
         pixbuf = self.pixbufs.get(image_url)
         if not pixbuf:
-            response = self.pool_manager.urlopen('GET', image_url)
+            response = requests.get(image_url)
             loader = GdkPixbuf.PixbufLoader()
-            loader.write(response.data)
+            loader.write(response.content)
             loader.close()
             pixbuf = loader.get_pixbuf()
             self.pixbufs[image_url] = pixbuf
