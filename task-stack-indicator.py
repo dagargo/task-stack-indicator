@@ -19,7 +19,7 @@
 from gi.repository import AppIndicator3 as AppIndicator
 from gi.repository import Gtk, GdkPixbuf
 from gi.repository import GObject
-import threading
+from threading import Thread
 import json
 import os
 import requests
@@ -46,11 +46,14 @@ class TaskStackIndicator():
 
         self.load_config()
         self.load_tasks()
-        self.indicator.connect("new-icon", lambda indicator: self.update_menu())
-        self.update_icon_and_menu()
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
+        self.edit_task_windows = {}
+        self.create_task_windows = []
+        self.configuration_window = ConfigurationWindow(self)
+        self.indicator.connect("new-icon", lambda indicator: self.update_menu())
+        self.update_icon_and_menu(False)
         self.pixbuf_url_factory = PixbufUrlFactory()
 
     def load_config(self):
@@ -64,11 +67,6 @@ class TaskStackIndicator():
             self.save_config()
         else:
             file.close()
-
-    def load_all(self):
-        self.load_tasks()
-        self.load_watched_issues()
-        self.load_in_progress_issues()
 
     def load_tasks(self):
         self.in_progress = []
@@ -109,59 +107,77 @@ class TaskStackIndicator():
                         icon_url = None
                 summary = fields.get("summary")
                 url = jira_url + "/browse/" + issue.get("key")
-                issue = {"image_url": icon_url, "summary" : summary, "data" : url}
+                issue = {"image_url": icon_url, "summary" : summary, "id" : url}
                 issues.append(issue)
         return issues
 
-    def update_icon_and_menu(self):
+    def update_icon_and_menu(self, background=True):
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
         icon = "level%d" % total
         if icon != self.indicator.get_icon():
             #This will trigger a call to update_menu
             self.indicator.set_icon(icon)
         else:
-            self.update_menu()
+            self.update_menu(background)
             
-    def update_menu(self):
+    def update_menu(self, background=True):
         menu = Gtk.Menu()
 
-        self.add_issues_list_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
-        self.add_issues_list_to_menu(menu, self.in_progress, self.open_url)
-        self.add_issues_list_to_menu(menu, self.watched, self.open_url)
+        self.add_tasks_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
+        self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
+        self.add_tasks_to_menu(menu, self.watched, self.open_url)
 
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
-        menuItem.connect("activate", self.add_task)
-        menuItem.show()
-        menu.append(menuItem)
+        item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
+        item.connect("activate", lambda widget: self.create_task())
+        item.show()
+        menu.append(item)
 
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
-        menuItem.connect("activate", lambda w: self.load_all_in_background(w))
-        menuItem.show()
-        menu.append(menuItem)
+        item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_REFRESH)
+        item.connect("activate", lambda widget: self.update_interface_in_background())
+        item.show()
+        menu.append(item)
 
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
-        menuItem.connect("activate", self.configure)
-        menuItem.show()
-        menu.append(menuItem)
+        item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_PREFERENCES)
+        item.connect("activate", lambda widget: self.configuration_window.open())
+        item.show()
+        menu.append(item)
 
         separator = Gtk.SeparatorMenuItem()
         separator.show()
         menu.append(separator)
 
-        menuItem = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
-        menuItem.connect("activate", self.exit)
-        menuItem.show()
-        menu.append(menuItem)
+        item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_QUIT)
+        item.connect("activate", lambda widget: self.exit())
+        item.show()
+        menu.append(item)
 
-        self.indicator.set_menu(menu)
+        if background:
+            GObject.idle_add(self.indicator.set_menu, menu)
+        else:
+            self.indicator.set_menu(menu)
+
+    def create_task(self):
+         create_task_window = CreateTaskWindow(self)
+         create_task_window.open()
+         self.create_task_windows.append(create_task_window)
+
+    def edit_task(self, widget, key):
+        for task in self.tasks["tasks"]:
+            if task["id"] == key:
+                break
+        edit_task_window = self.edit_task_windows.get(key)
+        if not edit_task_window:
+            edit_task_window = EditTaskWindow(self, task)
+            self.edit_task_windows[key] = edit_task_window
+        edit_task_window.open()
 
     def open_url(self, widget, url):
         webbrowser.open_new_tab(url)
 
-    def add_issues_list_to_menu(self, menu, tasks, callback):
+    def add_tasks_to_menu(self, menu, tasks, callback):
         if tasks:
             for task in tasks:
-                menuItem = Gtk.ImageMenuItem(task.get("summary"))
+                item = Gtk.ImageMenuItem(task.get("summary"))
                 image_url = task.get("image_url")
                 if image_url:
                     pixbuf = self.pixbuf_url_factory.get(image_url)
@@ -169,136 +185,29 @@ class TaskStackIndicator():
                     pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
                 image = Gtk.Image()
                 image.set_from_pixbuf(pixbuf)
-                menuItem.set_image(image)
-                menuItem.set_always_show_image(True);
-                menuItem.connect("activate", callback, task.get("data"))
-                menuItem.show()
-                menu.append(menuItem)
+                item.set_image(image)
+                item.set_always_show_image(True);
+                item.connect("activate", callback, task.get("id"))
+                item.show()
+                menu.append(item)
 
-            menuItem = Gtk.SeparatorMenuItem()
-            menuItem.show()
-            menu.append(menuItem)
+            item = Gtk.SeparatorMenuItem()
+            item.show()
+            menu.append(item)
 
-    def configure_task(self, widget, task_id):
-        print("Configuring...")
+    def update_interface_in_background(self):
+        Thread(target = self.update_interface).start()
 
-    def load_all_in_background(self, widget):
-        threading.Thread(target=self.load_all_and_update_icon_and_menu).start()
-
-    def load_all_and_update_icon_and_menu(self):
-        self.load_config()
-        self.load_all()
-        GObject.idle_add(self.update_icon_and_menu)
-
-    def load_all_periodically(self):
-        self.load_all_in_background(None)
-        seconds = self.config.get("refresh") * 60
-        self.timer = threading.Timer(seconds, self.load_all_periodically)
-        self.timer.start()
-            
-    def configure(self, widget):
-        builder = Gtk.Builder()
-        builder.add_from_string(self.glade_contents)
-        window = builder.get_object("config_window")
-        window.connect("delete-event", lambda widget, event: widget.hide() or True)
-        window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
-        window.set_position(Gtk.WindowPosition.CENTER)
-        cancel_button = builder.get_object("config_cancel_button")
-        cancel_button.connect("clicked", lambda event: window.hide())
-        accept_button = builder.get_object("config_accept_button")
-        entry_jira_url = builder.get_object("jira_url")
-        entry_jira_url.set_text(self.config["jira_url"])
-        entry_username = builder.get_object("username")
-        entry_username.set_text(self.config["username"])
-        entry_password = builder.get_object("password")
-        entry_password.set_text(self.config["password"])
-        spin_refresh = builder.get_object("refresh")
-        spin_refresh.set_value(self.config["refresh"])
-        spin_window = builder.get_object("window")
-        spin_window.set_value(self.config["window"])
-        accept_button.connect("clicked", self.save_configuration, window, entry_jira_url, entry_username, entry_password, spin_refresh, spin_window)
-        window.show()
-
-    def save_configuration(self, accept_button, window, entry_jira_url, entry_username, entry_password, spin_refresh, spin_window):
-        self.config["jira_url"] = entry_jira_url.get_text()
-        self.config["username"] = entry_username.get_text()
-        self.config["password"] = entry_password.get_text()
-        self.config["refresh"] = int(spin_refresh.get_value())
-        self.config["window"] = int(spin_window.get_value())
-        self.save_config()
-        window.hide()
-
-    def create_task_window_builder(self):
-        builder = Gtk.Builder()
-        builder.add_from_string(self.glade_contents)
-        window = builder.get_object("task_window")
-        window.connect("delete-event", lambda widget, event: widget.hide() or True)
-        window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
-        window.set_position(Gtk.WindowPosition.CENTER)
-        cancel_button = builder.get_object("task_cancel_button")
-        cancel_button.connect("clicked", lambda event: window.hide())
-        accept_button = builder.get_object("task_accept_button")
-        accept_button.set_can_default(True)
-        accept_button.grab_default()
-        summary_entry = builder.get_object("task_summary")
-        summary_entry.set_activates_default(True)
-        summary_entry.connect("changed", self.enable_accept_on_text_change, accept_button)
-        return (builder, window, accept_button, summary_entry)
-
-    def enable_accept_on_text_change(self, editable, accept_button):
-        accept_button.set_sensitive(editable.get_text() != "")
-
-    def add_task(self, widget):
-        (builder, window, accept_button, summary_entry) = self.create_task_window_builder()
-        delete_button = builder.get_object("task_delete_button")
-        delete_button.hide()
-        accept_button.connect("clicked", self.create_task, window, summary_entry)
-        window.show()
-
-    def edit_task(self, widget, data):
-        found = False
-        for task in self.tasks.get("tasks"):
-            if task.get("data") == data:
-                found = True
-                break
-        if found:
-            (builder, window, accept_button, summary_entry) = self.create_task_window_builder()  
-            summary_entry.set_text(task.get("summary"))
-            accept_button.connect("clicked", self.update_task, window, summary_entry, task)
-            delete_button = builder.get_object("task_delete_button")
-            delete_button.connect("clicked", self.delete_task, window, task)
-            window.show()
-        else:
-            print("Warning!")
-
-    def create_task(self, widget, task_window, task_summary_entry):
-        summary = task_summary_entry.get_text()
-        if summary == "":
-            print("Warning!")
-        else:
-            task_id = self.tasks.get("nextTaskId")
-            task = {"image_url": None, "summary" : summary, "data" : task_id}
-            self.tasks["nextTaskId"] = task_id + 1
-            self.tasks.get("tasks").append(task)
-            self.save_tasks()
-            GObject.idle_add(self.update_icon_and_menu)
-        task_window.hide()
-
-    def update_task(self, widget, task_window, task_summary_entry, task):
-        summary = task_summary_entry.get_text()
-        if summary == "":
-            print("Warning!")
-        else:
-            task["summary"] = summary
-            self.save_tasks()
-            GObject.idle_add(self.update_icon_and_menu)
-        task_window.hide()
-        
-    def delete_task(self, widget, window, task):
-        self.tasks.get("tasks").remove(task)
+    def update_interface(self):
+        self.load_tasks()
+        self.load_watched_issues()
+        self.load_in_progress_issues()
         self.update_icon_and_menu()
-        self.save_tasks()
-        window.hide()
+
+    def update_periodically(self):
+        self.update_interface_in_background()
+        ms = self.config.get("refresh") * 60000
+        GObject.timeout_add(ms, self.update_periodically)
 
     def save_tasks(self):
         fd = open(TaskStackIndicator.DATA_FILE, 'w')
@@ -310,16 +219,119 @@ class TaskStackIndicator():
         fd.write(json.dumps(self.config))
         fd.close()
 
-    def exit(self, widget):
-        self.timer.cancel()
+    def exit(self):
         Gtk.main_quit()
 
     def main(self):
-        GObject.threads_init()
-        self.load_all_periodically()
+        self.update_periodically()
         Gtk.main()
 
-class PixbufUrlFactory:
+class TaskStackIndicatorGladeWindow(object):
+
+    def __init__(self, task_stack_indicator, window_name):
+        self.task_stack_indicator = task_stack_indicator
+        self.builder = Gtk.Builder()
+        self.builder.add_from_string(task_stack_indicator.glade_contents)
+        self.window = self.builder.get_object(window_name)
+        self.window.connect("delete-event", lambda widget, event: widget.hide() or True)
+        self.window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
+        self.window.set_position(Gtk.WindowPosition.CENTER)
+        
+class ConfigurationWindow(TaskStackIndicatorGladeWindow):
+
+    def __init__(self, task_stack_indicator):
+        super(ConfigurationWindow, self).__init__(task_stack_indicator, "config_window")
+        self.cancel_button = self.builder.get_object("config_cancel_button")
+        self.cancel_button.connect("clicked", lambda widget: self.window.hide())
+        self.accept_button = self.builder.get_object("config_accept_button")
+        self.entry_jira_url = self.builder.get_object("jira_url")
+        self.entry_jira_url.set_text(self.task_stack_indicator.config["jira_url"])
+        self.entry_username = self.builder.get_object("username")
+        self.entry_username.set_text(self.task_stack_indicator.config["username"])
+        self.entry_password = self.builder.get_object("password")
+        self.entry_password.set_text(self.task_stack_indicator.config["password"])
+        self.spin_refresh = self.builder.get_object("refresh")
+        self.spin_refresh.set_value(self.task_stack_indicator.config["refresh"])
+        self.spin_window = self.builder.get_object("window")
+        self.spin_window.set_value(self.task_stack_indicator.config["window"])
+        self.accept_button.connect("clicked", lambda widget: self.save_config())
+        
+    def open(self):
+        self.window.present()
+
+    def save_config(self):
+        self.window.hide()
+        self.task_stack_indicator.config["jira_url"] = self.entry_jira_url.get_text()
+        self.task_stack_indicator.config["username"] = self.entry_username.get_text()
+        self.task_stack_indicator.config["password"] = self.entry_password.get_text()
+        self.task_stack_indicator.config["refresh"] = int(self.spin_refresh.get_value())
+        self.task_stack_indicator.config["window"] = int(self.spin_window.get_value())
+        self.task_stack_indicator.save_config()
+        self.task_stack_indicator.update_interface_in_background()
+
+class TaskWindow(TaskStackIndicatorGladeWindow):
+
+    def __init__(self, task_stack_indicator):
+        super(TaskWindow, self).__init__(task_stack_indicator, "task_window")
+        self.cancel_button = self.builder.get_object("task_cancel_button")
+        self.cancel_button.connect("clicked", lambda widget: self.window.hide())
+        self.accept_button = self.builder.get_object("task_accept_button")
+        self.accept_button.set_can_default(True)
+        self.accept_button.grab_default()
+        self.summary_entry = self.builder.get_object("task_summary")
+        self.summary_entry.connect("changed", lambda editable: self.accept_button.set_sensitive(editable.get_text() != ""))
+        self.summary_entry.set_activates_default(True)
+        self.delete_button = self.builder.get_object("task_delete_button")
+
+class CreateTaskWindow(TaskWindow):
+
+    def __init__(self, task_stack_indicator):
+        super(CreateTaskWindow, self).__init__(task_stack_indicator)
+        self.accept_button.set_sensitive(False)
+        self.delete_button.hide()
+        self.accept_button.connect("clicked", lambda widget: self.create_task())
+
+    def open(self):
+        self.window.present()
+
+    def create_task(self):
+        self.window.hide()
+        summary = self.summary_entry.get_text()
+        task_id = self.task_stack_indicator.tasks["nextTaskId"]
+        task = {"image_url": None, "summary" : summary, "id" : task_id}
+        self.task_stack_indicator.tasks["nextTaskId"] = task_id + 1
+        self.task_stack_indicator.tasks["tasks"].append(task)
+        self.task_stack_indicator.save_tasks()
+        self.task_stack_indicator.update_icon_and_menu()
+        self.task_stack_indicator.create_task_windows.remove(self)
+
+class EditTaskWindow(TaskWindow):
+
+    def __init__(self, task_stack_indicator, task):
+        super(EditTaskWindow, self).__init__(task_stack_indicator)
+        self.task = task
+        self.summary_entry.set_text(task.get("summary"))
+        self.accept_button.connect("clicked", lambda widget: self.update_task())
+        self.delete_button.connect("clicked", lambda widget: self.delete_task())
+
+    def open(self):
+        self.window.present()
+
+    def update_task(self):
+        self.window.hide()
+        self.task["summary"] = self.summary_entry.get_text()
+        self.task_stack_indicator.save_tasks()
+        self.task_stack_indicator.update_icon_and_menu()
+        self.task_stack_indicator.edit_task_windows.pop(self.task["id"])
+
+    def delete_task(self):
+        self.window.hide()
+        self.task_stack_indicator.tasks["tasks"].remove(self.task)
+        self.task_stack_indicator.save_tasks()
+        self.task_stack_indicator.update_icon_and_menu()
+        self.task_stack_indicator.edit_task_windows.pop(self.task["id"])
+
+class PixbufUrlFactory(object):
 
     def __init__(self):
         self.pixbufs = {}
@@ -336,5 +348,4 @@ class PixbufUrlFactory:
         return pixbuf
 
 if __name__ == "__main__":
-    indicator = TaskStackIndicator()
-    indicator.main()
+    TaskStackIndicator().main()
