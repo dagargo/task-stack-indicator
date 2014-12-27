@@ -1,0 +1,58 @@
+# Translations for task-stack-indicator.
+# Copyright (C) 2014 David García Goñi
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR dagargo at gmail.com, 2014.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-12-08 19:19+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: gui.glade:131
+msgctxt "configuration"
+msgid "Configuration"
+msgstr "Configuración"
+
+#: gui.glade:156
+msgctxt "jira_url"
+msgid "Jira URL"
+msgstr "URL de Jira"
+
+#: gui.glade:169
+msgctxt "password"
+msgid "Password"
+msgstr "Contraseña"
+
+#: gui.glade:183
+msgctxt "refresh_period"
+msgid "Refresh Period"
+msgstr "Periodo de Refresco"
+
+#: gui.glade:38
+msgctxt "summary"
+msgid "Summary"
+msgstr "Resumen"
+
+#: gui.glade:14
+msgctxt "task"
+msgid "Task"
+msgstr "Tarea"
+
+#: gui.glade:242
+msgctxt "username"
+msgid "Username"
+msgstr "Usuario"
+
+#: gui.glade:255
+msgctxt "watching_window"
+msgid "Watching Window"
+msgstr "Ventana de Vigilancia"
