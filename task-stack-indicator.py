@@ -18,67 +18,84 @@
 #
 from gi.repository import AppIndicator3 as AppIndicator
 from gi.repository import Gtk, GdkPixbuf
-from gi.repository import GObject
+from gi.repository import GLib
 from threading import Thread
+from threading import Lock
+from datetime import datetime
 import json
 import os
 import requests
 import webbrowser
 import urllib
-import threading
 from os.path import expanduser
+import logging
+import locale
 
-class TaskStackIndicator():
+logger = logging.getLogger(__name__)
 
-    DIR = expanduser("~") + "/.task-stack-indicator"
+class TaskStackIndicator(object):
+
+    NAME = "task-stack-indicator"
+    DIR = expanduser("~") + "/." + NAME
     CONFIG_FILE = DIR + "/config"
     DATA_FILE = DIR + "/tasks"
     IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
     WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
-    GLADE_FILE = "/usr/local/share/task-stack-indicator/gui.glade"
+    LOCALE_DIR = "/usr/local/share/" + NAME + "/locale/"
+    GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
     ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
 
     def __init__(self):
-        self.indicator = AppIndicator.Indicator.new("task-stack-indicator",
+        locale.bindtextdomain(TaskStackIndicator.NAME, TaskStackIndicator.LOCALE_DIR)
+        locale.textdomain(TaskStackIndicator.NAME)
+        self.indicator = AppIndicator.Indicator.new(TaskStackIndicator.NAME,
                                                 "level0",
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
+        self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
+        self.tasks = { "nextTaskId" : 0, "tasks" : []}
+        if not os.path.exists(TaskStackIndicator.DIR):
+            os.makedirs(TaskStackIndicator.DIR)
         self.load_config()
+        self.in_progress = []
+        self.watched = []
+        self.lock = Lock()
         self.load_tasks()
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
         self.edit_task_windows = {}
-        self.create_task_windows = []
+        self.create_task_window = None
         self.configuration_window = ConfigurationWindow(self)
-        self.indicator.connect("new-icon", lambda indicator: self.update_menu())
-        self.update_icon_and_menu(False)
+        self.indicator.connect("new-icon", lambda indicator: GLib.idle_add(self.update_menu))
+        self.update_icon_and_menu()
         self.pixbuf_url_factory = PixbufUrlFactory()
 
     def load_config(self):
-        if not os.path.exists(TaskStackIndicator.DIR):
-            os.makedirs(TaskStackIndicator.DIR)
+        logger.debug("Reading config file...")
         try:
             file = open(TaskStackIndicator.CONFIG_FILE, 'r')
             self.config = json.loads(file.read())
+            logger.debug("Tasks file readed")
         except IOError as e:
-            self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
             self.save_config()
+            logger.error("Error while reading config file")
         else:
             file.close()
 
     def load_tasks(self):
-        self.in_progress = []
-        self.watched = []
-        try:
-            file = open(TaskStackIndicator.DATA_FILE, 'r')
-            self.tasks = json.loads(file.read())
-        except IOError as e:
-            self.tasks = { "nextTaskId" : 0, "tasks" : []}
-            self.save_tasks()
-        else:
-            file.close()
+        with self.lock:
+            logger.debug("Reading tasks file...")
+            try:
+                file = open(TaskStackIndicator.DATA_FILE, 'r')
+                self.tasks = json.loads(file.read())
+                logger.debug("Tasks file readed")
+            except IOError as e:
+                self.save_tasks()
+                logger.error("Error while reading tasks file")
+            else:
+                file.close()
 
     def load_in_progress_issues(self):
         self.in_progress = self.load_jira_issues(TaskStackIndicator.IN_PROGRES_JQL)
@@ -93,42 +110,49 @@ class TaskStackIndicator():
         if jira_url:
             jql_url = jira_url + "/rest/api/2/search?jql=" + jql
             auth = (self.config.get("username"), self.config.get("password"))
-            response = requests.get(jql_url, auth=auth)
-            for issue in response.json().get("issues"):
-                fields = issue.get("fields")
-                priority = fields.get("priority")
-                if priority:
-                    icon_url = priority.get("iconUrl")
-                else:
-                    issue_type = fields.get("issuetype")
-                    if issue_type:
-                        icon_url = issue_type.get("iconUrl")
+            try:
+                response = requests.get(jql_url, auth=auth)
+                for issue in response.json().get("issues"):
+                    fields = issue.get("fields")
+                    priority = fields.get("priority")
+                    if priority:
+                        icon_url = priority.get("iconUrl")
                     else:
-                        icon_url = None
-                summary = fields.get("summary")
-                url = jira_url + "/browse/" + issue.get("key")
-                issue = {"image_url": icon_url, "summary" : summary, "id" : url}
-                issues.append(issue)
+                        issue_type = fields.get("issuetype")
+                        if issue_type:
+                            icon_url = issue_type.get("iconUrl")
+                        else:
+                            icon_url = None
+                    summary = fields.get("summary")
+                    url = jira_url + "/browse/" + issue.get("key")
+                    issue = {"image_url": icon_url, "summary" : summary, "id" : url}
+                    #We call the factory to have the pixbuf available in the future
+                    if icon_url:
+                        with self.lock:
+                            self.pixbuf_url_factory.get(icon_url)
+                    issues.append(issue)
+            except ConnectionError as e:
+                logger.error("Error while connecting to Jira")
         return issues
 
-    def update_icon_and_menu(self, background=True):
+    def update_icon_and_menu(self):
         total = min(len(self.in_progress) + len(self.tasks.get("tasks")), 5)
         icon = "level%d" % total
         if icon != self.indicator.get_icon():
             #This will trigger a call to update_menu
             self.indicator.set_icon(icon)
         else:
-            self.update_menu(background)
-            
-    def update_menu(self, background=True):
+            GLib.idle_add(self.update_menu)
+
+    def update_menu(self):
         menu = Gtk.Menu()
 
-        self.add_tasks_to_menu(menu, self.tasks.get("tasks"), self.edit_task)
+        self.add_tasks_to_menu(menu, self.tasks.get("tasks"), self.show_edit_task_window)
         self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
         self.add_tasks_to_menu(menu, self.watched, self.open_url)
 
         item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
-        item.connect("activate", lambda widget: self.create_task())
+        item.connect("activate", lambda widget: self.show_create_task_window())
         item.show()
         menu.append(item)
 
@@ -151,25 +175,28 @@ class TaskStackIndicator():
         item.show()
         menu.append(item)
 
-        if background:
-            GObject.idle_add(self.indicator.set_menu, menu)
-        else:
-            self.indicator.set_menu(menu)
+        self.indicator.set_menu(menu)
 
-    def create_task(self):
-         create_task_window = CreateTaskWindow(self)
-         create_task_window.open()
-         self.create_task_windows.append(create_task_window)
+    def show_create_task_window(self):
+        if not self.create_task_window:
+            self.create_task_window = CreateTaskWindow(self)
+        self.create_task_window.window.present()
 
-    def edit_task(self, widget, key):
+    def get_task_by_id(self, id):
+        task_found = None
         for task in self.tasks["tasks"]:
-            if task["id"] == key:
+            if task["id"] == id:
+                task_found = task
                 break
-        edit_task_window = self.edit_task_windows.get(key)
+        return task_found
+
+    def show_edit_task_window(self, widget, id):
+        task = self.get_task_by_id(id)
+        edit_task_window = self.edit_task_windows.get(id)
         if not edit_task_window:
             edit_task_window = EditTaskWindow(self, task)
-            self.edit_task_windows[key] = edit_task_window
-        edit_task_window.open()
+            self.edit_task_windows[id] = edit_task_window
+        edit_task_window.window.present()
 
     def open_url(self, widget, url):
         webbrowser.open_new_tab(url)
@@ -191,9 +218,9 @@ class TaskStackIndicator():
                 item.show()
                 menu.append(item)
 
-            item = Gtk.SeparatorMenuItem()
-            item.show()
-            menu.append(item)
+            separator = Gtk.SeparatorMenuItem()
+            separator.show()
+            menu.append(separator)
 
     def update_interface_in_background(self):
         Thread(target = self.update_interface).start()
@@ -207,7 +234,7 @@ class TaskStackIndicator():
     def update_periodically(self):
         self.update_interface_in_background()
         ms = self.config.get("refresh") * 60000
-        GObject.timeout_add(ms, self.update_periodically)
+        GLib.timeout_add(ms, self.update_periodically)
 
     def save_tasks(self):
         fd = open(TaskStackIndicator.DATA_FILE, 'w')
@@ -218,6 +245,32 @@ class TaskStackIndicator():
         fd = open(TaskStackIndicator.CONFIG_FILE, 'w')
         fd.write(json.dumps(self.config))
         fd.close()
+
+    def create_task(self, summary):
+        self.create_task_window.window.hide()
+        self.create_task_window = None
+        with self.lock:
+            task_id = self.tasks["nextTaskId"]
+            task = {"image_url": None, "summary" : summary, "id" : task_id}
+            self.tasks["nextTaskId"] = task_id + 1
+            self.tasks["tasks"].append(task)
+            self.save_tasks()
+        self.update_icon_and_menu()
+
+    def update_task(self, id, summary):
+        self.edit_task_windows.pop(id).window.hide()
+        with self.lock:
+            task = self.get_task_by_id(id)
+            task["summary"] = summary
+            self.save_tasks()
+        self.update_icon_and_menu()
+
+    def delete_task(self, id):
+        self.edit_task_windows.pop(id).window.hide()
+        with self.lock:
+            self.tasks["tasks"].remove(self.get_task_by_id(id))
+            self.save_tasks()
+        self.update_icon_and_menu()
 
     def exit(self):
         Gtk.main_quit()
@@ -289,47 +342,15 @@ class CreateTaskWindow(TaskWindow):
         super(CreateTaskWindow, self).__init__(task_stack_indicator)
         self.accept_button.set_sensitive(False)
         self.delete_button.hide()
-        self.accept_button.connect("clicked", lambda widget: self.create_task())
-
-    def open(self):
-        self.window.present()
-
-    def create_task(self):
-        self.window.hide()
-        summary = self.summary_entry.get_text()
-        task_id = self.task_stack_indicator.tasks["nextTaskId"]
-        task = {"image_url": None, "summary" : summary, "id" : task_id}
-        self.task_stack_indicator.tasks["nextTaskId"] = task_id + 1
-        self.task_stack_indicator.tasks["tasks"].append(task)
-        self.task_stack_indicator.save_tasks()
-        self.task_stack_indicator.update_icon_and_menu()
-        self.task_stack_indicator.create_task_windows.remove(self)
+        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.create_task, self.summary_entry.get_text()))
 
 class EditTaskWindow(TaskWindow):
 
     def __init__(self, task_stack_indicator, task):
         super(EditTaskWindow, self).__init__(task_stack_indicator)
-        self.task = task
+        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.update_task, task["id"], self.summary_entry.get_text()))
+        self.delete_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task, task["id"]))
         self.summary_entry.set_text(task.get("summary"))
-        self.accept_button.connect("clicked", lambda widget: self.update_task())
-        self.delete_button.connect("clicked", lambda widget: self.delete_task())
-
-    def open(self):
-        self.window.present()
-
-    def update_task(self):
-        self.window.hide()
-        self.task["summary"] = self.summary_entry.get_text()
-        self.task_stack_indicator.save_tasks()
-        self.task_stack_indicator.update_icon_and_menu()
-        self.task_stack_indicator.edit_task_windows.pop(self.task["id"])
-
-    def delete_task(self):
-        self.window.hide()
-        self.task_stack_indicator.tasks["tasks"].remove(self.task)
-        self.task_stack_indicator.save_tasks()
-        self.task_stack_indicator.update_icon_and_menu()
-        self.task_stack_indicator.edit_task_windows.pop(self.task["id"])
 
 class PixbufUrlFactory(object):
 
