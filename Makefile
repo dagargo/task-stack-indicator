@@ -30,5 +30,5 @@ uninstall:
 
 clean:
 	rm -f *~
-	rm -f locale/es/LC_MESSAGES/*~
+	rm -f locale/*~
 	rm -f \#*

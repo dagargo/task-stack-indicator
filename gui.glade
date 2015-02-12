@@ -2,13 +2,7 @@
 <!-- Generated with glade 3.18.3 -->
 <interface>
   <requires lib="gtk+" version="3.12"/>
-  <object class="GtkAdjustment" id="refresh_period_adj">
-    <property name="lower">1</property>
-    <property name="upper">60</property>
-    <property name="value">1</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
+  <object class="GtkTextBuffer" id="description_buffer"/>
   <object class="GtkWindow" id="task_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes" context="task">Task</property>
@@ -27,8 +21,9 @@
           <object class="GtkGrid" id="grid2">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="valign">start</property>
+            <property name="hexpand">True</property>
             <property name="vexpand">True</property>
+            <property name="row_spacing">6</property>
             <child>
               <object class="GtkLabel" id="label5">
                 <property name="visible">True</property>
@@ -36,7 +31,7 @@
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
                 <property name="label" translatable="yes" context="summary">Summary</property>
-                <property name="angle">0.02</property>
+                <property name="ellipsize">start</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
@@ -54,9 +49,46 @@
                 <property name="top_attach">0</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel" id="label7">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="halign">end</property>
+                <property name="margin_right">6</property>
+                <property name="label" translatable="yes" context="description">Description</property>
+                <property name="angle">0.02</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="scrolledwindow1">
+                <property name="width_request">300</property>
+                <property name="height_request">150</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="GtkTextView" id="task_description">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="wrap_mode">word</property>
+                    <property name="buffer">description_buffer</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
@@ -120,6 +152,13 @@
       </object>
     </child>
   </object>
+  <object class="GtkAdjustment" id="refresh_period_adj">
+    <property name="lower">1</property>
+    <property name="upper">60</property>
+    <property name="value">1</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
   <object class="GtkAdjustment" id="watching_window_adj">
     <property name="upper">30</property>
     <property name="value">1</property>
@@ -144,7 +183,7 @@
           <object class="GtkGrid" id="grid1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="valign">start</property>
+            <property name="hexpand">True</property>
             <property name="vexpand">True</property>
             <property name="row_spacing">6</property>
             <child>
@@ -274,7 +313,7 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>

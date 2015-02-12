@@ -57,6 +57,7 @@ class TaskStackIndicator(object):
         self.tasks = { "nextTaskId" : 0, "tasks" : []}
         if not os.path.exists(TaskStackIndicator.DIR):
             os.makedirs(TaskStackIndicator.DIR)
+        self.unauthorized = False
         self.load_config()
         self.in_progress = []
         self.watched = []
@@ -107,30 +108,33 @@ class TaskStackIndicator(object):
     def load_jira_issues(self, jql):
         issues = []
         jira_url = self.config.get("jira_url")
-        if jira_url:
+        if jira_url and not self.unauthorized:
             jql_url = jira_url + "/rest/api/2/search?jql=" + jql
             auth = (self.config.get("username"), self.config.get("password"))
             try:
                 response = requests.get(jql_url, auth=auth)
-                for issue in response.json().get("issues"):
-                    fields = issue.get("fields")
-                    priority = fields.get("priority")
-                    if priority:
-                        icon_url = priority.get("iconUrl")
-                    else:
-                        issue_type = fields.get("issuetype")
-                        if issue_type:
-                            icon_url = issue_type.get("iconUrl")
+                if response.status_code == 401:
+                    self.unauthorized = True
+                else:
+                    for issue in response.json().get("issues"):
+                        fields = issue.get("fields")
+                        priority = fields.get("priority")
+                        if priority:
+                            icon_url = priority.get("iconUrl")
                         else:
-                            icon_url = None
-                    summary = fields.get("summary")
-                    url = jira_url + "/browse/" + issue.get("key")
-                    issue = {"image_url": icon_url, "summary" : summary, "id" : url}
-                    #We call the factory to have the pixbuf available in the future
-                    if icon_url:
-                        with self.lock:
-                            self.pixbuf_url_factory.get(icon_url)
-                    issues.append(issue)
+                            issue_type = fields.get("issuetype")
+                            if issue_type:
+                                icon_url = issue_type.get("iconUrl")
+                            else:
+                                icon_url = None
+                        summary = fields.get("summary")
+                        url = jira_url + "/browse/" + issue.get("key")
+                        issue = {"image_url": icon_url, "summary" : summary, "id" : url}
+                        #We call the factory to have the pixbuf available in the future
+                        if icon_url:
+                            with self.lock:
+                                self.pixbuf_url_factory.get(icon_url)
+                        issues.append(issue)
             except ConnectionError as e:
                 logger.error("Error while connecting to Jira")
         return issues
@@ -246,22 +250,23 @@ class TaskStackIndicator(object):
         fd.write(json.dumps(self.config))
         fd.close()
 
-    def create_task(self, summary):
+    def create_task(self, summary, description):
         self.create_task_window.window.hide()
         self.create_task_window = None
         with self.lock:
             task_id = self.tasks["nextTaskId"]
-            task = {"image_url": None, "summary" : summary, "id" : task_id}
+            task = {"image_url": None, "summary" : summary, "id" : task_id, "description" : description}
             self.tasks["nextTaskId"] = task_id + 1
             self.tasks["tasks"].append(task)
             self.save_tasks()
         self.update_icon_and_menu()
 
-    def update_task(self, id, summary):
+    def update_task(self, id, summary, description):
         self.edit_task_windows.pop(id).window.hide()
         with self.lock:
             task = self.get_task_by_id(id)
             task["summary"] = summary
+            task["description"] = description
             self.save_tasks()
         self.update_icon_and_menu()
 
@@ -320,6 +325,7 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.task_stack_indicator.config["refresh"] = int(self.spin_refresh.get_value())
         self.task_stack_indicator.config["window"] = int(self.spin_window.get_value())
         self.task_stack_indicator.save_config()
+        #self.task_stack_indicator.unauthorized = False
         self.task_stack_indicator.update_interface_in_background()
 
 class TaskWindow(TaskStackIndicatorGladeWindow):
@@ -334,6 +340,7 @@ class TaskWindow(TaskStackIndicatorGladeWindow):
         self.summary_entry = self.builder.get_object("task_summary")
         self.summary_entry.connect("changed", lambda editable: self.accept_button.set_sensitive(editable.get_text() != ""))
         self.summary_entry.set_activates_default(True)
+        self.description_buffer = self.builder.get_object("description_buffer")
         self.delete_button = self.builder.get_object("task_delete_button")
 
 class CreateTaskWindow(TaskWindow):
@@ -342,15 +349,17 @@ class CreateTaskWindow(TaskWindow):
         super(CreateTaskWindow, self).__init__(task_stack_indicator)
         self.accept_button.set_sensitive(False)
         self.delete_button.hide()
-        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.create_task, self.summary_entry.get_text()))
+        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.create_task, self.summary_entry.get_text(), self.description_buffer.get_text(self.description_buffer.get_start_iter(), self.description_buffer.get_end_iter(), True)))
 
 class EditTaskWindow(TaskWindow):
 
     def __init__(self, task_stack_indicator, task):
         super(EditTaskWindow, self).__init__(task_stack_indicator)
-        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.update_task, task["id"], self.summary_entry.get_text()))
+        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.update_task, task["id"], self.summary_entry.get_text(), self.description_buffer.get_text(self.description_buffer.get_start_iter(), self.description_buffer.get_end_iter(), True)))
         self.delete_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task, task["id"]))
         self.summary_entry.set_text(task.get("summary"))
+        description = task.get("description")
+        self.description_buffer.set_text(description)
 
 class PixbufUrlFactory(object):
 

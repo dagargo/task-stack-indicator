@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2014-12-08 19:19+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2015-02-11 19:44+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -17,42 +17,47 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:131
+#: gui.glade:170
 msgctxt "configuration"
 msgid "Configuration"
 msgstr "Configuration"
 
-#: gui.glade:156
+#: gui.glade:65
+msgctxt "description"
+msgid "Description"
+msgstr "Description"
+
+#: gui.glade:194
 msgctxt "jira_url"
 msgid "Jira URL"
 msgstr "Jira URL"
 
-#: gui.glade:169
+#: gui.glade:207
 msgctxt "password"
 msgid "Password"
 msgstr "Password"
 
-#: gui.glade:183
+#: gui.glade:221
 msgctxt "refresh_period"
 msgid "Refresh Period"
 msgstr "Refresh Period"
 
-#: gui.glade:38
+#: gui.glade:40
 msgctxt "summary"
 msgid "Summary"
 msgstr "Summary"
 
-#: gui.glade:14
+#: gui.glade:15
 msgctxt "task"
 msgid "Task"
 msgstr "Task"
 
-#: gui.glade:242
+#: gui.glade:280
 msgctxt "username"
 msgid "Username"
 msgstr "Username"
 
-#: gui.glade:255
+#: gui.glade:293
 msgctxt "watching_window"
 msgid "Watching Window"
 msgstr "Watching Window"
