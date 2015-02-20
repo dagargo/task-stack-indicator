@@ -17,19 +17,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from gi.repository import AppIndicator3 as AppIndicator
-from gi.repository import Gtk, GdkPixbuf
+from gi.repository import Gtk
 from gi.repository import GLib
 from threading import Thread
 from threading import Lock
 from datetime import datetime
 import json
 import os
-import requests
 import webbrowser
-import urllib
 from os.path import expanduser
+from os.path import exists
 import logging
 import locale
+from jql_jira_client import JqlJiraClient
+from jql_jira_client import UnauthorizedException
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class TaskStackIndicator(object):
     DATA_FILE = DIR + "/tasks"
     IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
     WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
-    LOCALE_DIR = "/usr/local/share/" + NAME + "/locale/"
+    IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < now() ORDER BY priority DESC, duedate DESC"
+    LOCALE_DIR = "/usr/local/share/" + NAME + "/locale"
     GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
     ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
 
@@ -55,12 +57,13 @@ class TaskStackIndicator(object):
 
         self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
         self.tasks = { "nextTaskId" : 0, "tasks" : []}
-        if not os.path.exists(TaskStackIndicator.DIR):
-            os.makedirs(TaskStackIndicator.DIR)
-        self.unauthorized = False
+        if not exists(TaskStackIndicator.DIR):
+            makedirs(TaskStackIndicator.DIR)
+        self.authorized = True
         self.load_config()
         self.in_progress = []
         self.watched = []
+        self.in_due = []
         self.lock = Lock()
         self.load_tasks()
         file = open(TaskStackIndicator.GLADE_FILE, 'r')
@@ -71,7 +74,7 @@ class TaskStackIndicator(object):
         self.configuration_window = ConfigurationWindow(self)
         self.indicator.connect("new-icon", lambda indicator: GLib.idle_add(self.update_menu))
         self.update_icon_and_menu()
-        self.pixbuf_url_factory = PixbufUrlFactory()
+        self.jql_jira_client = JqlJiraClient()
 
     def load_config(self):
         logger.debug("Reading config file...")
@@ -104,39 +107,19 @@ class TaskStackIndicator(object):
     def load_watched_issues(self):
         jql = TaskStackIndicator.WATCHED_JQL.format(self.config.get("window"))
         self.watched = self.load_jira_issues(jql)
-        
+
+    def load_in_due_issues(self):
+        self.in_due = self.load_jira_issues(TaskStackIndicator.IN_DUE_JQL)
+
     def load_jira_issues(self, jql):
         issues = []
         jira_url = self.config.get("jira_url")
-        if jira_url and not self.unauthorized:
-            jql_url = jira_url + "/rest/api/2/search?jql=" + jql
-            auth = (self.config.get("username"), self.config.get("password"))
+        if jira_url and self.authorized:
             try:
-                response = requests.get(jql_url, auth=auth)
-                if response.status_code == 401:
-                    self.unauthorized = True
-                else:
-                    for issue in response.json().get("issues"):
-                        fields = issue.get("fields")
-                        priority = fields.get("priority")
-                        if priority:
-                            icon_url = priority.get("iconUrl")
-                        else:
-                            issue_type = fields.get("issuetype")
-                            if issue_type:
-                                icon_url = issue_type.get("iconUrl")
-                            else:
-                                icon_url = None
-                        summary = fields.get("summary")
-                        url = jira_url + "/browse/" + issue.get("key")
-                        issue = {"image_url": icon_url, "summary" : summary, "id" : url}
-                        #We call the factory to have the pixbuf available in the future
-                        if icon_url:
-                            with self.lock:
-                                self.pixbuf_url_factory.get(icon_url)
-                        issues.append(issue)
-            except ConnectionError as e:
-                logger.error("Error while connecting to Jira")
+                issues = self.jql_jira_client.load_issues(jira_url, self.config.get("username"), self.config.get("password"), jql)
+            except UnauthorizedException as e:
+                self.authorized = False
+                logger.error("Unauthorized to log in JIRA")
         return issues
 
     def update_icon_and_menu(self):
@@ -149,11 +132,41 @@ class TaskStackIndicator(object):
             GLib.idle_add(self.update_menu)
 
     def update_menu(self):
+
         menu = Gtk.Menu()
 
-        self.add_tasks_to_menu(menu, self.tasks.get("tasks"), self.show_edit_task_window)
-        self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
-        self.add_tasks_to_menu(menu, self.watched, self.open_url)
+        if self.tasks.get("tasks"):
+            self.add_tasks_to_menu(menu, self.tasks.get("tasks"), self.show_edit_task_window)
+            separator = Gtk.SeparatorMenuItem()
+            separator.show()
+            menu.append(separator)
+
+        if self.in_progress:
+            self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
+            separator = Gtk.SeparatorMenuItem()
+            separator.show()
+            menu.append(separator)
+
+        if self.config.get("jira_url") and self.authorized:
+            item = Gtk.ImageMenuItem("Tasks with passed due date")
+            item.show()
+            item.set_submenu(Gtk.Menu())
+            if self.in_due:
+                self.add_tasks_to_menu(item.get_submenu(), self.in_due, self.open_url)
+                menu.append(item)
+                separator = Gtk.SeparatorMenuItem()
+                separator.show()
+                menu.append(separator)
+
+            item = Gtk.ImageMenuItem("Watched tasks recently updated")
+            item.show()
+            item.set_submenu(Gtk.Menu())
+            if self.watched:
+                self.add_tasks_to_menu(item.get_submenu(), self.watched, self.open_url)
+                menu.append(item)
+                separator = Gtk.SeparatorMenuItem()
+                separator.show()
+                menu.append(separator)
 
         item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
         item.connect("activate", lambda widget: self.show_create_task_window())
@@ -206,25 +219,20 @@ class TaskStackIndicator(object):
         webbrowser.open_new_tab(url)
 
     def add_tasks_to_menu(self, menu, tasks, callback):
-        if tasks:
-            for task in tasks:
-                item = Gtk.ImageMenuItem(task.get("summary"))
-                image_url = task.get("image_url")
-                if image_url:
-                    pixbuf = self.pixbuf_url_factory.get(image_url)
-                else:
-                    pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
-                image = Gtk.Image()
-                image.set_from_pixbuf(pixbuf)
-                item.set_image(image)
-                item.set_always_show_image(True);
-                item.connect("activate", callback, task.get("id"))
-                item.show()
-                menu.append(item)
-
-            separator = Gtk.SeparatorMenuItem()
-            separator.show()
-            menu.append(separator)
+        for task in tasks:
+            item = Gtk.ImageMenuItem(task.get("summary"))
+            image_url = task.get("image_url")
+            if image_url:
+                pixbuf = self.jql_jira_client.get_image(image_url)
+            else:
+                pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
+            image = Gtk.Image()
+            image.set_from_pixbuf(pixbuf)
+            item.set_image(image)
+            item.set_always_show_image(True);
+            item.connect("activate", callback, task.get("id"))
+            item.show()
+            menu.append(item)
 
     def update_interface_in_background(self):
         Thread(target = self.update_interface).start()
@@ -232,6 +240,7 @@ class TaskStackIndicator(object):
     def update_interface(self):
         self.load_tasks()
         self.load_watched_issues()
+        self.load_in_due_issues()
         self.load_in_progress_issues()
         self.update_icon_and_menu()
 
@@ -325,7 +334,7 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.task_stack_indicator.config["refresh"] = int(self.spin_refresh.get_value())
         self.task_stack_indicator.config["window"] = int(self.spin_window.get_value())
         self.task_stack_indicator.save_config()
-        #self.task_stack_indicator.unauthorized = False
+        self.task_stack_indicator.authorized = True
         self.task_stack_indicator.update_interface_in_background()
 
 class TaskWindow(TaskStackIndicatorGladeWindow):
@@ -360,22 +369,6 @@ class EditTaskWindow(TaskWindow):
         self.summary_entry.set_text(task.get("summary"))
         description = task.get("description")
         self.description_buffer.set_text(description)
-
-class PixbufUrlFactory(object):
-
-    def __init__(self):
-        self.pixbufs = {}
-        
-    def get(self, image_url):
-        pixbuf = self.pixbufs.get(image_url)
-        if not pixbuf:
-            response = requests.get(image_url)
-            loader = GdkPixbuf.PixbufLoader()
-            loader.write(response.content)
-            loader.close()
-            pixbuf = loader.get_pixbuf()
-            self.pixbufs[image_url] = pixbuf
-        return pixbuf
 
 if __name__ == "__main__":
     TaskStackIndicator().main()

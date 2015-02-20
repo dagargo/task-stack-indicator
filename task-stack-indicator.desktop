@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Task Stack Indicator
-Exec=/usr/local/bin/task-stack-indicator.py
+Exec=/usr/local/bin/task-stack-indicator
 Icon=level3
 Terminal=false
 Type=Application
