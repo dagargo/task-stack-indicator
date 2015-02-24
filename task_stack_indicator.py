@@ -29,36 +29,41 @@ from os.path import expanduser
 from os.path import exists
 import logging
 import locale
+import gettext
 from jql_jira_client import JqlJiraClient
 from jql_jira_client import UnauthorizedException
 
 logger = logging.getLogger(__name__)
 
+NAME = "task-stack-indicator"
+
+CONFIG_DIR = expanduser("~") + "/." + NAME
+if not exists(CONFIG_DIR):
+    makedirs(CONFIG_DIR)
+LOCALE_DIR = "/usr/local/share/" + NAME + "/locale"
+GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
+CONFIG_FILE = CONFIG_DIR + "/config"
+DATA_FILE = CONFIG_DIR + "/tasks"
+
+locale.bindtextdomain(NAME, LOCALE_DIR)
+locale.textdomain(NAME)
+_ = locale.gettext
+
+IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
+WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
+IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY priority DESC, duedate DESC"
+ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
+
 class TaskStackIndicator(object):
 
-    NAME = "task-stack-indicator"
-    DIR = expanduser("~") + "/." + NAME
-    CONFIG_FILE = DIR + "/config"
-    DATA_FILE = DIR + "/tasks"
-    IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
-    WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
-    IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY priority DESC, duedate DESC"
-    LOCALE_DIR = "/usr/local/share/" + NAME + "/locale"
-    GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
-    ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
-
     def __init__(self):
-        locale.bindtextdomain(TaskStackIndicator.NAME, TaskStackIndicator.LOCALE_DIR)
-        locale.textdomain(TaskStackIndicator.NAME)
-        self.indicator = AppIndicator.Indicator.new(TaskStackIndicator.NAME,
+        self.indicator = AppIndicator.Indicator.new(NAME,
                                                 "level0",
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
         self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "due": 15, "watching": 7 }
         self.tasks = { "nextTaskId" : 0, "tasks" : []}
-        if not exists(TaskStackIndicator.DIR):
-            makedirs(TaskStackIndicator.DIR)
         self.authorized = True
         self.load_config()
         self.in_progress = []
@@ -66,7 +71,7 @@ class TaskStackIndicator(object):
         self.in_due = []
         self.lock = Lock()
         self.load_tasks()
-        file = open(TaskStackIndicator.GLADE_FILE, 'r')
+        file = open(GLADE_FILE, 'r')
         self.glade_contents = file.read()
         file.close()
         self.edit_task_windows = {}
@@ -79,7 +84,7 @@ class TaskStackIndicator(object):
     def load_config(self):
         logger.debug("Reading config file...")
         try:
-            file = open(TaskStackIndicator.CONFIG_FILE, 'r')
+            file = open(CONFIG_FILE, 'r')
             self.config = json.loads(file.read())
             logger.debug("Tasks file readed")
         except IOError as e:
@@ -92,7 +97,7 @@ class TaskStackIndicator(object):
         with self.lock:
             logger.debug("Reading tasks file...")
             try:
-                file = open(TaskStackIndicator.DATA_FILE, 'r')
+                file = open(DATA_FILE, 'r')
                 self.tasks = json.loads(file.read())
                 logger.debug("Tasks file readed")
             except IOError as e:
@@ -102,14 +107,14 @@ class TaskStackIndicator(object):
                 file.close()
 
     def load_in_progress_issues(self):
-        self.in_progress = self.load_jira_issues(TaskStackIndicator.IN_PROGRES_JQL)
+        self.in_progress = self.load_jira_issues(IN_PROGRES_JQL)
 
     def load_in_due_issues(self):
-        jql = TaskStackIndicator.IN_DUE_JQL.format(self.config.get("due"))
+        jql = IN_DUE_JQL.format(self.config.get("due"))
         self.in_due = self.load_jira_issues(jql)
 
     def load_watched_issues(self):
-        jql = TaskStackIndicator.WATCHED_JQL.format(self.config.get("watching"))
+        jql = WATCHED_JQL.format(self.config.get("watching"))
         self.watched = self.load_jira_issues(jql)
 
     def load_jira_issues(self, jql):
@@ -151,7 +156,7 @@ class TaskStackIndicator(object):
         if self.config.get("jira_url") and self.authorized:
             due = self.config["due"]
             if due > 0:
-                item = Gtk.ImageMenuItem("Tasks with due date in {:d} days".format(due))
+                item = Gtk.ImageMenuItem(_("Tasks with due date in n days").format(due))
                 item.show()
                 item.set_submenu(Gtk.Menu())
                 if self.in_due:
@@ -162,7 +167,7 @@ class TaskStackIndicator(object):
                     menu.append(separator)
 
             if self.config["watching"] > 0:
-                item = Gtk.ImageMenuItem("Watched tasks recently updated")
+                item = Gtk.ImageMenuItem(_("Watched tasks recently updated"))
                 item.show()
                 item.set_submenu(Gtk.Menu())
                 if self.watched:
@@ -257,12 +262,12 @@ class TaskStackIndicator(object):
         GLib.timeout_add(ms, self.update_periodically)
 
     def save_tasks(self):
-        fd = open(TaskStackIndicator.DATA_FILE, 'w')
+        fd = open(DATA_FILE, 'w')
         fd.write(json.dumps(self.tasks))
         fd.close()
         
     def save_config(self):
-        fd = open(TaskStackIndicator.CONFIG_FILE, 'w')
+        fd = open(CONFIG_FILE, 'w')
         fd.write(json.dumps(self.config))
         fd.close()
 
@@ -308,7 +313,7 @@ class TaskStackIndicatorGladeWindow(object):
         self.builder.add_from_string(task_stack_indicator.glade_contents)
         self.window = self.builder.get_object(window_name)
         self.window.connect("delete-event", lambda widget, event: widget.hide() or True)
-        self.window.set_icon_from_file(TaskStackIndicator.ICON_FILE)
+        self.window.set_icon_from_file(ICON_FILE)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         
 class ConfigurationWindow(TaskStackIndicatorGladeWindow):

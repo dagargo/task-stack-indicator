@@ -5,7 +5,7 @@
   <object class="GtkTextBuffer" id="description_buffer"/>
   <object class="GtkWindow" id="task_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes" context="task">Task</property>
+    <property name="title" translatable="yes">Task</property>
     <property name="resizable">False</property>
     <property name="has_resize_grip">False</property>
     <child>
@@ -30,7 +30,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="summary">Summary</property>
+                <property name="label" translatable="yes">Summary</property>
                 <property name="ellipsize">start</property>
               </object>
               <packing>
@@ -55,7 +55,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="description">Description</property>
+                <property name="label" translatable="yes">Description</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
@@ -166,13 +166,13 @@
   </object>
   <object class="GtkAdjustment" id="watching_window_adj">
     <property name="upper">30</property>
-    <property name="value">7</property>
+    <property name="value">7.0000000002235172</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="config_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes" context="configuration">Configuration</property>
+    <property name="title" translatable="yes">Configuration</property>
     <property name="resizable">False</property>
     <property name="has_resize_grip">False</property>
     <child>
@@ -197,7 +197,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="jira_url">Jira URL</property>
+                <property name="label" translatable="yes">Jira URL</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
@@ -210,7 +210,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="password">Password</property>
+                <property name="label" translatable="yes">Password</property>
                 <property name="justify">center</property>
               </object>
               <packing>
@@ -224,7 +224,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="refresh_period_minutes">Refresh Period Minutes</property>
+                <property name="label" translatable="yes">Refresh Period Minutes</property>
                 <property name="justify">center</property>
               </object>
               <packing>
@@ -283,7 +283,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="username">Username</property>
+                <property name="label" translatable="yes">Username</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
@@ -296,7 +296,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="watching_days">Watching Days</property>
+                <property name="label" translatable="yes">Watching Days</property>
                 <property name="justify">center</property>
               </object>
               <packing>
@@ -308,10 +308,8 @@
               <object class="GtkSpinButton" id="watching">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="text" translatable="yes">1</property>
                 <property name="adjustment">watching_window_adj</property>
                 <property name="numeric">True</property>
-                <property name="value">1</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -324,7 +322,7 @@
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
                 <property name="margin_right">6</property>
-                <property name="label" translatable="yes" context="days_to_due_date">Days to Due Date</property>
+                <property name="label" translatable="yes">Days to Due Date</property>
                 <property name="justify">center</property>
               </object>
               <packing>
