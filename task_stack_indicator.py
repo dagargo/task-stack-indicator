@@ -70,7 +70,7 @@ class TaskStackIndicator(object):
         self.glade_contents = file.read()
         file.close()
         self.edit_task_windows = {}
-        self.create_task_window = None
+        self.create_task_window = self.create_task_window = CreateTaskWindow(self)
         self.configuration_window = ConfigurationWindow(self)
         self.indicator.connect("new-icon", lambda indicator: GLib.idle_add(self.update_menu))
         self.update_icon_and_menu()
@@ -195,8 +195,8 @@ class TaskStackIndicator(object):
         self.indicator.set_menu(menu)
 
     def show_create_task_window(self):
-        if not self.create_task_window:
-            self.create_task_window = CreateTaskWindow(self)
+        if not self.create_task_window.window.props.visible:
+            self.create_task_window.set_data("", "")
         self.create_task_window.window.present()
 
     def get_task_by_id(self, id):
@@ -213,6 +213,9 @@ class TaskStackIndicator(object):
         if not edit_task_window:
             edit_task_window = EditTaskWindow(self, task)
             self.edit_task_windows[id] = edit_task_window
+        else:
+            if not edit_task_window.window.props.visible:
+                edit_task_window.set_data(task.get("summary"), task.get("description"))
         edit_task_window.window.present()
 
     def open_url(self, widget, url):
@@ -351,6 +354,10 @@ class TaskWindow(TaskStackIndicatorGladeWindow):
         self.summary_entry.set_activates_default(True)
         self.description_buffer = self.builder.get_object("description_buffer")
         self.delete_button = self.builder.get_object("task_delete_button")
+        
+    def set_data(self, summary, description):
+        self.summary_entry.set_text(summary)
+        self.description_buffer.set_text(description)        
 
 class CreateTaskWindow(TaskWindow):
 
