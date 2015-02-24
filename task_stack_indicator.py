@@ -42,7 +42,7 @@ class TaskStackIndicator(object):
     DATA_FILE = DIR + "/tasks"
     IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
     WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
-    IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < now() ORDER BY priority DESC, duedate DESC"
+    IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY priority DESC, duedate DESC"
     LOCALE_DIR = "/usr/local/share/" + NAME + "/locale"
     GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
     ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
@@ -55,7 +55,7 @@ class TaskStackIndicator(object):
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
-        self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "window": 7}
+        self.config = { "jira_url" : "", "username": "", "password": "", "refresh": 5, "due": 15, "watching": 7 }
         self.tasks = { "nextTaskId" : 0, "tasks" : []}
         if not exists(TaskStackIndicator.DIR):
             makedirs(TaskStackIndicator.DIR)
@@ -104,12 +104,13 @@ class TaskStackIndicator(object):
     def load_in_progress_issues(self):
         self.in_progress = self.load_jira_issues(TaskStackIndicator.IN_PROGRES_JQL)
 
-    def load_watched_issues(self):
-        jql = TaskStackIndicator.WATCHED_JQL.format(self.config.get("window"))
-        self.watched = self.load_jira_issues(jql)
-
     def load_in_due_issues(self):
-        self.in_due = self.load_jira_issues(TaskStackIndicator.IN_DUE_JQL)
+        jql = TaskStackIndicator.IN_DUE_JQL.format(self.config.get("due"))
+        self.in_due = self.load_jira_issues(jql)
+
+    def load_watched_issues(self):
+        jql = TaskStackIndicator.WATCHED_JQL.format(self.config.get("watching"))
+        self.watched = self.load_jira_issues(jql)
 
     def load_jira_issues(self, jql):
         issues = []
@@ -148,25 +149,28 @@ class TaskStackIndicator(object):
             menu.append(separator)
 
         if self.config.get("jira_url") and self.authorized:
-            item = Gtk.ImageMenuItem("Tasks with passed due date")
-            item.show()
-            item.set_submenu(Gtk.Menu())
-            if self.in_due:
-                self.add_tasks_to_menu(item.get_submenu(), self.in_due, self.open_url)
-                menu.append(item)
-                separator = Gtk.SeparatorMenuItem()
-                separator.show()
-                menu.append(separator)
+            due = self.config["due"]
+            if due > 0:
+                item = Gtk.ImageMenuItem("Tasks with due date in {:d} days".format(due))
+                item.show()
+                item.set_submenu(Gtk.Menu())
+                if self.in_due:
+                    self.add_tasks_to_menu(item.get_submenu(), self.in_due, self.open_url)
+                    menu.append(item)
+                    separator = Gtk.SeparatorMenuItem()
+                    separator.show()
+                    menu.append(separator)
 
-            item = Gtk.ImageMenuItem("Watched tasks recently updated")
-            item.show()
-            item.set_submenu(Gtk.Menu())
-            if self.watched:
-                self.add_tasks_to_menu(item.get_submenu(), self.watched, self.open_url)
-                menu.append(item)
-                separator = Gtk.SeparatorMenuItem()
-                separator.show()
-                menu.append(separator)
+            if self.config["watching"] > 0:
+                item = Gtk.ImageMenuItem("Watched tasks recently updated")
+                item.show()
+                item.set_submenu(Gtk.Menu())
+                if self.watched:
+                    self.add_tasks_to_menu(item.get_submenu(), self.watched, self.open_url)
+                    menu.append(item)
+                    separator = Gtk.SeparatorMenuItem()
+                    separator.show()
+                    menu.append(separator)
 
         item = Gtk.ImageMenuItem.new_from_stock(Gtk.STOCK_ADD)
         item.connect("activate", lambda widget: self.show_create_task_window())
@@ -215,7 +219,7 @@ class TaskStackIndicator(object):
             self.edit_task_windows[id] = edit_task_window
         else:
             if not edit_task_window.window.props.visible:
-                edit_task_window.set_data(task.get("summary"), task.get("description"))
+                edit_task_window.set_data(task["summary"], task["description"])
         edit_task_window.window.present()
 
     def open_url(self, widget, url):
@@ -223,8 +227,8 @@ class TaskStackIndicator(object):
 
     def add_tasks_to_menu(self, menu, tasks, callback):
         for task in tasks:
-            item = Gtk.ImageMenuItem(task.get("summary"))
-            image_url = task.get("image_url")
+            item = Gtk.ImageMenuItem(task["summary"])
+            image_url = task["image_url"]
             if image_url:
                 pixbuf = self.jql_jira_client.get_image(image_url)
             else:
@@ -249,7 +253,7 @@ class TaskStackIndicator(object):
 
     def update_periodically(self):
         self.update_interface_in_background()
-        ms = self.config.get("refresh") * 60000
+        ms = self.config["refresh"] * 60000
         GLib.timeout_add(ms, self.update_periodically)
 
     def save_tasks(self):
@@ -315,18 +319,24 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.cancel_button.connect("clicked", lambda widget: self.window.hide())
         self.accept_button = self.builder.get_object("config_accept_button")
         self.entry_jira_url = self.builder.get_object("jira_url")
-        self.entry_jira_url.set_text(self.task_stack_indicator.config["jira_url"])
         self.entry_username = self.builder.get_object("username")
-        self.entry_username.set_text(self.task_stack_indicator.config["username"])
         self.entry_password = self.builder.get_object("password")
-        self.entry_password.set_text(self.task_stack_indicator.config["password"])
         self.spin_refresh = self.builder.get_object("refresh")
-        self.spin_refresh.set_value(self.task_stack_indicator.config["refresh"])
-        self.spin_window = self.builder.get_object("window")
-        self.spin_window.set_value(self.task_stack_indicator.config["window"])
+        self.spin_due = self.builder.get_object("due")
+        self.spin_watching = self.builder.get_object("watching")
         self.accept_button.connect("clicked", lambda widget: self.save_config())
-        
+    
+    def load(self):
+        self.entry_jira_url.set_text(self.task_stack_indicator.config["jira_url"])
+        self.entry_username.set_text(self.task_stack_indicator.config["username"])
+        self.entry_password.set_text(self.task_stack_indicator.config["password"])
+        self.spin_refresh.set_value(self.task_stack_indicator.config["refresh"])
+        self.spin_due.set_value(self.task_stack_indicator.config["due"])
+        self.spin_watching.set_value(self.task_stack_indicator.config["watching"])
+    
     def open(self):
+        if not self.window.props.visible:
+            self.load()
         self.window.present()
 
     def save_config(self):
@@ -335,7 +345,8 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.task_stack_indicator.config["username"] = self.entry_username.get_text()
         self.task_stack_indicator.config["password"] = self.entry_password.get_text()
         self.task_stack_indicator.config["refresh"] = int(self.spin_refresh.get_value())
-        self.task_stack_indicator.config["window"] = int(self.spin_window.get_value())
+        self.task_stack_indicator.config["due"] = int(self.spin_due.get_value())
+        self.task_stack_indicator.config["watching"] = int(self.spin_watching.get_value())
         self.task_stack_indicator.save_config()
         self.task_stack_indicator.authorized = True
         self.task_stack_indicator.update_interface_in_background()

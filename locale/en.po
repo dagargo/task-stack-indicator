@@ -17,47 +17,42 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:170
 msgctxt "configuration"
 msgid "Configuration"
 msgstr "Configuration"
 
-#: gui.glade:65
 msgctxt "description"
 msgid "Description"
 msgstr "Description"
 
-#: gui.glade:194
 msgctxt "jira_url"
 msgid "Jira URL"
 msgstr "Jira URL"
 
-#: gui.glade:207
 msgctxt "password"
 msgid "Password"
 msgstr "Password"
 
-#: gui.glade:221
-msgctxt "refresh_period"
-msgid "Refresh Period"
-msgstr "Refresh Period"
+msgctxt "refresh_period_minutes"
+msgid "Refresh Period Minutes"
+msgstr "Refresh Period Minutes"
 
-#: gui.glade:40
+msgctxt "days_to_due_date"
+msgid "Days to Due Date"
+msgstr "Days to Due Date"
+
 msgctxt "summary"
 msgid "Summary"
 msgstr "Summary"
 
-#: gui.glade:15
 msgctxt "task"
 msgid "Task"
 msgstr "Task"
 
-#: gui.glade:280
 msgctxt "username"
 msgid "Username"
 msgstr "Username"
 
-#: gui.glade:293
-msgctxt "watching_window"
-msgid "Watching Window"
-msgstr "Watching Window"
+msgctxt "watching_days"
+msgid "Watching Days"
+msgstr "Watching Days"
