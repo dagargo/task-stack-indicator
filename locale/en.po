@@ -38,8 +38,8 @@ msgid "Password"
 msgstr "Password"
 
 #: gui.glade:227
-msgid "Refresh Period Minutes"
-msgstr "Refresh Period Minutes"
+msgid "Refresh Period"
+msgstr "Refresh Period"
 
 #: gui.glade:33
 msgid "Summary"
@@ -57,8 +57,11 @@ msgstr "Username"
 msgid "Watching Days"
 msgstr "Watching Days"
 
-msgid "Watched tasks recently updated"
-msgstr "Watched tasks recently updated"
-
 msgid "Tasks with due date in n days"
-msgstr "Tareas con fecha de fin en {:d} días"
+msgstr "Tasks with due date in {:d} days"
+
+msgid "Non planned tasks"
+msgstr "Non planned tasks"
+
+msgid "Watched tasks updated in the last n days"
+msgstr "Watched tasks updated in the last {:d} days"
