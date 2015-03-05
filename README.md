@@ -12,3 +12,12 @@ Also, it offers integration with Atlassian JIRA and provides
 - the watched issues updated in the last y days.
 
 It is possible to connect to JIRA from behind a proxy by setting the environment variables http_proxy and https_proxy.
+
+Installation
+------------
+
+The package dependencies for Ubuntu are
+- libappindicator3-1
+- python3
+
+To install them, simply execute `sudo apt-get install libappindicator3-1 python3`.
