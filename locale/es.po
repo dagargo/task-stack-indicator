@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: task-stack-indicator\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-02-24 21:10+0100\n"
+"POT-Creation-Date: 2015-03-05 17:08+0100\n"
 "PO-Revision-Date: 2015-02-11 19:44+0100\n"
 "Last-Translator: David García Goñi <dagargo at gmail dot com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:175
+#: gui.glade:181
 msgid "Configuration"
 msgstr "Configuración"
 
-#: gui.glade:325
+#: gui.glade:331
 msgid "Days to Due Date"
 msgstr "Días para Fecha de Fin"
 
@@ -29,15 +29,15 @@ msgstr "Días para Fecha de Fin"
 msgid "Description"
 msgstr "Descripción"
 
-#: gui.glade:200
+#: gui.glade:206
 msgid "Jira URL"
 msgstr "URL de Jira"
 
-#: gui.glade:213
+#: gui.glade:219
 msgid "Password"
 msgstr "Contraseña"
 
-#: gui.glade:227
+#: gui.glade:233
 msgid "Refresh Period"
 msgstr "Periodo de Refresco"
 
@@ -49,11 +49,15 @@ msgstr "Resumen"
 msgid "Task"
 msgstr "Tarea"
 
-#: gui.glade:286
+#: gui.glade:368
+msgid "Task Limit"
+msgstr "Límite de Tareas"
+
+#: gui.glade:292
 msgid "Username"
 msgstr "Usuario"
 
-#: gui.glade:299
+#: gui.glade:305
 msgid "Watching Days"
 msgstr "Días de Vigilancia"
 

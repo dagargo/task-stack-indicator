@@ -23,8 +23,8 @@ from threading import Thread
 from threading import Lock
 from datetime import datetime
 import json
-import os
 import webbrowser
+from os import makedirs
 from os.path import expanduser
 from os.path import exists
 import logging
@@ -58,10 +58,11 @@ ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
 JIRA_URL = "jira_url"
 USERNAME = "username"
 PASSWORD = "password"
-REFRESH = "refresh"
-DUE_DATE = "due"
-WATCHING = "watching"
-NEXT_TASK_ID = "nextTaskId"
+REFRESH = "refresh_period"
+DUE_DATE = "due_days"
+WATCHING = "watching_days"
+TASK_LIMIT = "task_limit"
+NEXT_TASK_ID = "next_task_id"
 TASKS = "tasks"
 ID = "id"
 SUMMARY = "summary"
@@ -76,7 +77,7 @@ class TaskStackIndicator(object):
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
-        self.config = { JIRA_URL : "", USERNAME: "", PASSWORD: "", REFRESH: 5, DUE_DATE: 15, WATCHING: 7 }
+        self.config = { TASK_LIMIT: 7, JIRA_URL : "", USERNAME: "", PASSWORD: "", REFRESH: 5, DUE_DATE: 15, WATCHING: 7 }
         self.tasks = { NEXT_TASK_ID : 0, TASKS : []}
         self.authorized = True
         self.load_config()
@@ -147,7 +148,8 @@ class TaskStackIndicator(object):
         return issues
 
     def update_icon_and_menu(self):
-        total = min(len(self.in_progress) + len(self.tasks.get(TASKS)), 5)
+        total_in_progress = len(self.in_progress) + len(self.tasks[TASKS])
+        total = min(round(total_in_progress * 5.0 / self.config[TASK_LIMIT]), 5)
         icon = "level%d" % total
         if icon != self.indicator.get_icon():
             #This will trigger a call to update_menu
@@ -166,9 +168,6 @@ class TaskStackIndicator(object):
 
         if self.in_progress:
             self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
-            separator = Gtk.SeparatorMenuItem()
-            separator.show()
-            menu.append(separator)
 
         if self.config.get(JIRA_URL) and self.authorized:
             due = self.config[DUE_DATE]
@@ -181,9 +180,14 @@ class TaskStackIndicator(object):
             if watching > 0:
                 self.add_sub_menu(menu, _("Watched tasks updated in the last n days").format(watching), self.watched)
 
+            if self.in_due or self.not_planned or self.watched:
+	            separator = Gtk.SeparatorMenuItem()
+	            separator.show()
+	            menu.append(separator)
+
         self.add_item(menu, Gtk.STOCK_ADD, lambda widget: self.show_create_task_window())
 
-        self.add_item(menu, Gtk.STOCK_REFRESH, lambda widget: self.update_interface_in_background())
+        self.add_item(menu, Gtk.STOCK_REFRESH, lambda widget: self.force_update_interface())
 
         self.add_item(menu, Gtk.STOCK_PREFERENCES, lambda widget: self.configuration_window.open())
 
@@ -202,9 +206,6 @@ class TaskStackIndicator(object):
         if tasks:
             self.add_tasks_to_menu(item.get_submenu(), tasks, self.open_url)
             menu.append(item)
-            separator = Gtk.SeparatorMenuItem()
-            separator.show()
-            menu.append(separator)
             
     def add_item(self, menu, text, l):
         item = Gtk.ImageMenuItem.new_from_stock(text)
@@ -254,6 +255,10 @@ class TaskStackIndicator(object):
             item.connect("activate", callback, task.get(ID))
             item.show()
             menu.append(item)
+
+    def force_update_interface(self):
+        self.authorized = True
+        self.update_interface_in_background()
 
     def update_interface_in_background(self):
         Thread(target = self.update_interface).start()
@@ -332,22 +337,24 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.cancel_button = self.builder.get_object("config_cancel_button")
         self.cancel_button.connect("clicked", lambda widget: self.window.hide())
         self.accept_button = self.builder.get_object("config_accept_button")
+        self.spin_task_limit = self.builder.get_object(TASK_LIMIT)
         self.entry_jira_url = self.builder.get_object(JIRA_URL)
         self.entry_username = self.builder.get_object(USERNAME)
         self.entry_password = self.builder.get_object(PASSWORD)
         self.spin_refresh = self.builder.get_object(REFRESH)
         self.spin_due = self.builder.get_object(DUE_DATE)
-        self.spin_watched = self.builder.get_object(WATCHING)
+        self.spin_watching = self.builder.get_object(WATCHING)
         self.accept_button.connect("clicked", lambda widget: self.save_config())
     
     def load(self):
+        self.spin_task_limit.set_value(self.task_stack_indicator.config[TASK_LIMIT])
         self.entry_jira_url.set_text(self.task_stack_indicator.config[JIRA_URL])
         self.entry_username.set_text(self.task_stack_indicator.config[USERNAME])
         self.entry_password.set_text(self.task_stack_indicator.config[PASSWORD])
         self.spin_refresh.set_value(self.task_stack_indicator.config[REFRESH])
         self.spin_due.set_value(self.task_stack_indicator.config[DUE_DATE])
-        self.spin_watched.set_value(self.task_stack_indicator.config[WATCHING])
-    
+        self.spin_watching.set_value(self.task_stack_indicator.config[WATCHING])
+
     def open(self):
         if not self.window.props.visible:
             self.load()
@@ -355,6 +362,7 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
 
     def save_config(self):
         self.window.hide()
+        self.task_stack_indicator.config[TASK_LIMIT] = int(self.spin_task_limit.get_value())
         self.task_stack_indicator.config[JIRA_URL] = self.entry_jira_url.get_text()
         self.task_stack_indicator.config[USERNAME] = self.entry_username.get_text()
         self.task_stack_indicator.config[PASSWORD] = self.entry_password.get_text()

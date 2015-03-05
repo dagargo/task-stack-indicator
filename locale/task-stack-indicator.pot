@@ -1,27 +1,27 @@
-# Translations for task-stack-indicator.
-# Copyright (C) 2014 David García Goñi
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR dagargo at gmail dot com, 2014.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: task-stack-indicator\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-02-24 21:10+0100\n"
+"POT-Creation-Date: 2015-03-05 17:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: David García Goñi <dagargo at gmail dot com>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:175
+#: gui.glade:181
 msgid "Configuration"
 msgstr ""
 
-#: gui.glade:325
+#: gui.glade:331
 msgid "Days to Due Date"
 msgstr ""
 
@@ -29,15 +29,15 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: gui.glade:200
+#: gui.glade:206
 msgid "Jira URL"
 msgstr ""
 
-#: gui.glade:213
+#: gui.glade:219
 msgid "Password"
 msgstr ""
 
-#: gui.glade:227
+#: gui.glade:233
 msgid "Refresh Period"
 msgstr ""
 
@@ -49,19 +49,14 @@ msgstr ""
 msgid "Task"
 msgstr ""
 
-#: gui.glade:286
+#: gui.glade:368
+msgid "Task Limit"
+msgstr ""
+
+#: gui.glade:292
 msgid "Username"
 msgstr ""
 
-#: gui.glade:299
+#: gui.glade:305
 msgid "Watching Days"
-msgstr ""
-
-msgid "Tasks with due date in n days"
-msgstr ""
-
-msgid "Non planned tasks"
-msgstr ""
-
-msgid "Watched tasks updated in the last n days"
 msgstr ""
