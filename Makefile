@@ -33,3 +33,4 @@ clean:
 	rm -f *~
 	rm -f locale/*~
 	rm -f \#*
+	rm -rf __pycache__
