@@ -1,3 +1,6 @@
 *~
+locale/*~
 .settings/
+__pycache__/
 .project
+.pydevproject

@@ -51,7 +51,7 @@ _ = locale.gettext
 
 IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
 WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
-IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY priority DESC, duedate DESC"
+IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY duedate ASC, priority DESC"
 NOT_PLANNED_JQL = "assignee = currentUser() AND (duedate is EMPTY OR fixVersion is EMPTY) AND status != Closed ORDER BY priority DESC"
 ICON_FILE = "/usr/share/icons/Humanity/apps/22/level3.svg"
 
