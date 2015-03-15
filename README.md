@@ -1,7 +1,7 @@
 task-stack-indicator
 ====================
 
-task-stack-indicator is an Ubuntu indicator that allows you to control your task stack.
+task-stack-indicator is an application indicator that allows you to control your task stack.
 
 It allows to manage locally stored tasks.
 
