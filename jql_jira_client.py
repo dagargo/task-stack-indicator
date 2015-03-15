@@ -48,8 +48,9 @@ class JqlJiraClient(object):
                             image_url = issue_type.get("iconUrl")
                         else:
                             image_url = None
-                    summary = fields.get("summary")
-                    url = jira_url + "/browse/" + issue.get("key")
+                    key = issue.get("key")
+                    summary = key + " - " + fields.get("summary")
+                    url = jira_url + "/browse/" + key
                     issue = {"image_url": image_url, "summary" : summary, "id" : url}
                     if image_url:
                         with self.lock:
