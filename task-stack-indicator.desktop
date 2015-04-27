@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Task Stack Indicator
 Exec=/usr/local/bin/task-stack-indicator
-Icon=level3
+Icon=task-stack-indicator
 Terminal=false
 Type=Application

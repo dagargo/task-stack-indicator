@@ -17,6 +17,7 @@
 
 import logging
 import requests
+from requests.exceptions import ConnectionError
 from threading import Lock
 from gi.repository import GdkPixbuf
 

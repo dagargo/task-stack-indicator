@@ -53,7 +53,8 @@ IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY p
 WATCHED_JQL = "watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC"
 IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY duedate ASC, priority DESC"
 NOT_PLANNED_JQL = "assignee = currentUser() AND (duedate is EMPTY OR fixVersion is EMPTY) AND status != Closed ORDER BY priority DESC"
-ICON_FILE = "/usr/share/icons/Humanity/apps/22/level%d.svg"
+STATUS_ICON_FILE = "task-stack-indicator-%d"
+APP_FILE = "/usr/share/icons/Humanity/apps/48/task-stack-indicator.svg"
 
 JIRA_URL = "jira_url"
 USERNAME = "username"
@@ -73,7 +74,7 @@ class TaskStackIndicator(object):
 
     def __init__(self):
         self.indicator = AppIndicator.Indicator.new(NAME,
-                                                ICON_FILE % 0,
+                                                STATUS_ICON_FILE % 0,
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
@@ -150,7 +151,7 @@ class TaskStackIndicator(object):
     def update_icon_and_menu(self):
         total_in_progress = len(self.in_progress) + len(self.tasks[TASKS])
         total = min(round(total_in_progress * 5.0 / self.config[TASK_LIMIT]), 5)
-        icon = ICON_FILE % total
+        icon = STATUS_ICON_FILE % total
         if icon != self.indicator.get_icon():
             #This will trigger a call to update_menu
             self.indicator.set_icon(icon)
@@ -327,7 +328,7 @@ class TaskStackIndicatorGladeWindow(object):
         self.builder.add_from_string(task_stack_indicator.glade_contents)
         self.window = self.builder.get_object(window_name)
         self.window.connect("delete-event", lambda widget, event: widget.hide() or True)
-        self.window.set_icon_from_file(ICON_FILE % 3)
+        self.window.set_icon_from_file(APP_FILE)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         
 class ConfigurationWindow(TaskStackIndicatorGladeWindow):
@@ -371,6 +372,8 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.task_stack_indicator.config[WATCHING] = int(self.spin_watching.get_value())
         self.task_stack_indicator.save_config()
         self.task_stack_indicator.authorized = True
+        #We refresh the interface first because the queries can take a while
+        self.task_stack_indicator.update_icon_and_menu()
         self.task_stack_indicator.update_interface_in_background()
 
 class TaskWindow(TaskStackIndicatorGladeWindow):
