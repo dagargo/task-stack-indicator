@@ -30,23 +30,24 @@ from os.path import exists
 import logging
 import locale
 import gettext
-from jql_jira_client import JqlJiraClient
-from jql_jira_client import UnauthorizedException
+from jira_client import JiraClient
+from jira_client import JiraException
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
-NAME = "task-stack-indicator"
+APP_NAME = "task-stack-indicator"
 
-CONFIG_DIR = expanduser("~") + "/." + NAME
+CONFIG_DIR = expanduser("~") + "/." + APP_NAME
 if not exists(CONFIG_DIR):
     makedirs(CONFIG_DIR)
-LOCALE_DIR = "/usr/local/share/" + NAME + "/locale"
-GLADE_FILE = "/usr/local/share/" + NAME + "/gui.glade"
+LOCALE_DIR = "/usr/local/share/" + APP_NAME + "/locale"
+GLADE_FILE = "/usr/local/share/" + APP_NAME + "/gui.glade"
 CONFIG_FILE = CONFIG_DIR + "/config"
 DATA_FILE = CONFIG_DIR + "/tasks"
 
-locale.bindtextdomain(NAME, LOCALE_DIR)
-locale.textdomain(NAME)
+locale.bindtextdomain(APP_NAME, LOCALE_DIR)
+locale.textdomain(APP_NAME)
 _ = locale.gettext
 
 IN_PROGRES_JQL = "assignee = currentUser() AND status = 'In progress' ORDER BY priority DESC"
@@ -55,6 +56,8 @@ IN_DUE_JQL = "assignee = currentUser() AND status != Closed AND duedate < {:d}d 
 NOT_PLANNED_JQL = "assignee = currentUser() AND (duedate is EMPTY OR fixVersion is EMPTY) AND status != Closed ORDER BY priority DESC"
 STATUS_ICON_FILE = "task-stack-indicator-%d"
 APP_FILE = "/usr/share/icons/Humanity/apps/48/task-stack-indicator.svg"
+
+CREATE_ISSUE_URL = "{:s}/secure/CreateIssueDetails!init.jspa?pid={:s}&issuetype={:s}&summary={:s}&description={:s}&assignee={:s}&reporter={:s}"
 
 JIRA_URL = "jira_url"
 USERNAME = "username"
@@ -69,11 +72,12 @@ ID = "id"
 SUMMARY = "summary"
 DESCRIPTION = "description"
 IMAGE_URL = "image_url"
+NAME = "name"
 
 class TaskStackIndicator(object):
 
     def __init__(self):
-        self.indicator = AppIndicator.Indicator.new(NAME,
+        self.indicator = AppIndicator.Indicator.new(APP_NAME,
                                                 STATUS_ICON_FILE % 0,
                                                 AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
@@ -86,6 +90,8 @@ class TaskStackIndicator(object):
         self.in_due = []
         self.not_planned = []
         self.watched = []
+        self.projects = []
+        self.issue_types = []
         self.lock = Lock()
         self.load_tasks()
         file = open(GLADE_FILE, 'r')
@@ -96,7 +102,7 @@ class TaskStackIndicator(object):
         self.configuration_window = ConfigurationWindow(self)
         self.indicator.connect("new-icon", lambda indicator: GLib.idle_add(self.update_menu))
         self.update_icon_and_menu()
-        self.jql_jira_client = JqlJiraClient()
+        self.jira_client = JiraClient()
 
     def load_config(self):
         logger.debug("Reading config file...")
@@ -127,26 +133,31 @@ class TaskStackIndicator(object):
         self.in_progress = self.load_jira_issues(IN_PROGRES_JQL)
 
     def load_in_due_issues(self):
-        jql = IN_DUE_JQL.format(self.config.get(DUE_DATE))
+        jql = IN_DUE_JQL.format(self.config[DUE_DATE])
         self.in_due = self.load_jira_issues(jql)
 
     def load_not_planned_issues(self):
         self.not_planned = self.load_jira_issues(NOT_PLANNED_JQL)
 
     def load_watched_issues(self):
-        jql = WATCHED_JQL.format(self.config.get(WATCHING))
+        jql = WATCHED_JQL.format(self.config[WATCHING])
         self.watched = self.load_jira_issues(jql)
 
     def load_jira_issues(self, jql):
         issues = []
-        jira_url = self.config.get(JIRA_URL)
-        if jira_url and self.authorized:
+        jira_url = self.config[JIRA_URL]
+        if self.is_jira_enabled():
             try:
-                issues = self.jql_jira_client.load_issues(jira_url, self.config.get(USERNAME), self.config.get(PASSWORD), jql)
-            except UnauthorizedException as e:
-                self.authorized = False
-                logger.error("Unauthorized to log in JIRA")
+                issues = self.jira_client.get_issues(jira_url, self.config[USERNAME], self.config[PASSWORD], jql)
+            except JiraException as e:
+                self.process_jira_exception(e)
         return issues
+
+    def process_jira_exception(self, exception):
+        if exception.code == 401:
+            self.authorized = False
+        message = "Error {:d} ({:s}) while connecting to JIRA: {:s}".format(exception.code, exception.reason, exception.text)
+        logger.error(message)
 
     def update_icon_and_menu(self):
         total_in_progress = len(self.in_progress) + len(self.tasks[TASKS])
@@ -170,7 +181,7 @@ class TaskStackIndicator(object):
         if self.in_progress:
             self.add_tasks_to_menu(menu, self.in_progress, self.open_url)
 
-        if self.config.get(JIRA_URL) and self.authorized:
+        if self.is_jira_enabled():
             due = self.config[DUE_DATE]
             if due > 0:
                 self.add_sub_menu(menu, _("Tasks with due date in n days").format(due), self.in_due)            
@@ -204,9 +215,9 @@ class TaskStackIndicator(object):
         item = Gtk.ImageMenuItem(msg)
         item.show()
         item.set_submenu(Gtk.Menu())
-        if tasks:
-            self.add_tasks_to_menu(item.get_submenu(), tasks, self.open_url)
-            menu.append(item)
+        menu.append(item)
+        self.add_tasks_to_menu(item.get_submenu(), tasks, self.open_url)
+        item.set_sensitive(tasks)
             
     def add_item(self, menu, text, l):
         item = Gtk.ImageMenuItem.new_from_stock(text)
@@ -236,6 +247,7 @@ class TaskStackIndicator(object):
         else:
             if not edit_task_window.window.props.visible:
                 edit_task_window.set_data(task[SUMMARY], task[DESCRIPTION])
+            edit_task_window.update_upload_button()
         edit_task_window.window.present()
 
     def open_url(self, widget, url):
@@ -246,7 +258,7 @@ class TaskStackIndicator(object):
             item = Gtk.ImageMenuItem(task[SUMMARY])
             image_url = task[IMAGE_URL]
             if image_url:
-                pixbuf = self.jql_jira_client.get_image(image_url)
+                pixbuf = self.jira_client.get_image(image_url)
             else:
                 pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
             image = Gtk.Image()
@@ -270,6 +282,8 @@ class TaskStackIndicator(object):
         self.load_in_due_issues()
         self.load_in_progress_issues()
         self.load_not_planned_issues()
+        self.load_projects()
+        self.load_issue_types()        
         self.update_icon_and_menu()
 
     def update_periodically(self):
@@ -312,6 +326,26 @@ class TaskStackIndicator(object):
             self.tasks[TASKS].remove(self.get_task_by_id(id))
             self.save_tasks()
         self.update_icon_and_menu()
+
+    def load_projects(self):
+        jira_url = self.config[JIRA_URL]
+        if self.is_jira_enabled():
+            try:
+                self.projects = self.jira_client.get_projects(jira_url, self.config[USERNAME], self.config[PASSWORD])
+            except JiraException as e:
+                self.process_jira_exception(e)
+        
+    def load_issue_types(self):
+        jira_url = self.config[JIRA_URL]
+        if self.is_jira_enabled():
+            try:
+                self.issue_types = self.jira_client.get_issue_types(jira_url, self.config[USERNAME], self.config[PASSWORD])
+            except JiraException as e:
+                self.process_jira_exception(e)
+
+    def is_jira_enabled(self):
+        jira_url = self.config[JIRA_URL]
+        return jira_url and self.authorized;
 
     def exit(self):
         Gtk.main_quit()
@@ -390,6 +424,7 @@ class TaskWindow(TaskStackIndicatorGladeWindow):
         self.summary_entry.set_activates_default(True)
         self.description_buffer = self.builder.get_object("description_buffer")
         self.delete_button = self.builder.get_object("task_delete_button")
+        self.upload_button = self.builder.get_object("task_upload_button")
         
     def set_data(self, summary, description):
         self.summary_entry.set_text(summary)
@@ -401,6 +436,7 @@ class CreateTaskWindow(TaskWindow):
         super(CreateTaskWindow, self).__init__(task_stack_indicator)
         self.accept_button.set_sensitive(False)
         self.delete_button.hide()
+        self.upload_button.hide()
         self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.create_task, self.summary_entry.get_text(), self.description_buffer.get_text(self.description_buffer.get_start_iter(), self.description_buffer.get_end_iter(), True)))
 
 class EditTaskWindow(TaskWindow):
@@ -409,9 +445,65 @@ class EditTaskWindow(TaskWindow):
         super(EditTaskWindow, self).__init__(task_stack_indicator)
         self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.update_task, task[ID], self.summary_entry.get_text(), self.description_buffer.get_text(self.description_buffer.get_start_iter(), self.description_buffer.get_end_iter(), True)))
         self.delete_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task, task[ID]))
-        self.summary_entry.set_text(task.get(SUMMARY))
-        description = task.get(DESCRIPTION)
+        self.upload_button.connect("clicked", lambda widget: GLib.idle_add(self.upload_task))
+        self.update_upload_button()
+        self.summary_entry.set_text(task[SUMMARY])    
+        description = task[DESCRIPTION]
         self.description_buffer.set_text(description)
+
+    def update_upload_button(self):
+        sensitive = self.task_stack_indicator.is_jira_enabled() and self.task_stack_indicator.projects and self.task_stack_indicator.issue_types
+        self.upload_button.set_sensitive(sensitive)
+
+    def upload_task(self):
+        issue_fields_window = IssueFieldsTaskWindow(self.task_stack_indicator, self, self.task_stack_indicator.projects, self.task_stack_indicator.issue_types)
+        issue_fields_window.window.present()
+
+class IssueFieldsTaskWindow(TaskStackIndicatorGladeWindow):
+
+    def __init__(self, task_stack_indicator, parent, projects, issue_types):
+        super(IssueFieldsTaskWindow, self).__init__(task_stack_indicator, "issue_fields_window")
+        self.parent = parent
+        self.window.set_modal(True)
+        self.window.set_transient_for(parent.window)
+        self.accept_button = self.builder.get_object("issue_fields_accept_button")
+        self.accept_button.set_can_default(True)
+        self.accept_button.grab_default()
+        self.cancel_button = self.builder.get_object("issue_fields_cancel_button")
+        self.cancel_button.connect("clicked", lambda widget: self.window.hide())
+
+        self.projects_combo = self.builder.get_object("projects_combobox")
+        self.projects_model = Gtk.ListStore(str, str)
+        for project in projects:
+            self.projects_model.append([project[ID], project[NAME]])
+        self.projects_combo.set_model(self.projects_model)
+        cell = Gtk.CellRendererText()
+        self.projects_combo.pack_start(cell, True)
+        self.projects_combo.add_attribute(cell, 'text', 1)
+        self.projects_combo.set_active(0)
+        
+        self.issue_types_combo = self.builder.get_object("issue_types_combobox")
+        self.issue_types_model = Gtk.ListStore(str, str)
+        for issue_type in issue_types:
+            self.issue_types_model.append([issue_type[ID], issue_type[NAME]])
+        self.issue_types_combo.set_model(self.issue_types_model)
+        cell = Gtk.CellRendererText()
+        self.issue_types_combo.pack_start(cell, True)
+        self.issue_types_combo.add_attribute(cell, 'text', 1)
+        self.issue_types_combo.set_active(0)
+
+        self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.open_new_issue))
+        
+    def open_new_issue(self):
+        project_id = self.projects_model[self.projects_combo.get_active()][0]
+        issue_type_id = self.issue_types_model[self.issue_types_combo.get_active()][0]
+        summary = urllib.parse.quote(self.parent.summary_entry.get_text())
+        description = urllib.parse.quote(self.parent.description_buffer.get_text(self.parent.description_buffer.get_start_iter(), self.parent.description_buffer.get_end_iter(), True))
+        jira_url = self.task_stack_indicator.config[JIRA_URL]
+        user = self.task_stack_indicator.config[USERNAME]
+        url = CREATE_ISSUE_URL.format(jira_url, project_id, issue_type_id, summary, description, user, user)
+        webbrowser.open_new_tab(url)
+        self.window.hide()
 
 if __name__ == "__main__":
     TaskStackIndicator().main()

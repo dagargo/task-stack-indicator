@@ -22,21 +22,22 @@ from threading import Lock
 from gi.repository import GdkPixbuf
 
 logger = logging.getLogger(__name__)
+headers = {"Content-Type": "application/json", "Accept" : "application/json"}
 
-class JqlJiraClient(object):
+class JiraClient(object):
 
     def __init__(self):
         self.pixbufs = {}
         self.lock = Lock()
 
-    def load_issues(self, jira_url, username, password, jql):
+    def get_issues(self, jira_url, username, password, jql):
         issues = []
         jql_url = jira_url + "/rest/api/2/search?jql=" + jql
         auth = (username, password)
         try:
-            response = requests.get(jql_url, auth=auth)
-            if response.status_code == 401:
-                raise UnauthorizedException()
+            response = requests.get(jql_url, auth=auth, headers=headers)
+            if response.status_code != 200:
+                raise JiraException(response.status_code, response.reason, response.text)
             else:
                 for issue in response.json().get("issues"):
                     fields = issue.get("fields")
@@ -67,9 +68,50 @@ class JqlJiraClient(object):
         except ConnectionError as e:
             logger.error("Error while connecting to JIRA")
         return issues
-        
+
     def get_image(self, image_url):
         return self.pixbufs.get(image_url)
+
+    def create_issue(self, jira_url, username, password, issue):
+        post_url = jira_url + "/rest/api/2/issue"
+        auth = (username, password)
+        entity = None
+        try:
+            response = requests.post(post_url, auth=auth, headers=headers, data=issue)
+            if response.status_code != 201:
+                raise JiraException(response.status_code, response.reason, response.text)
+            else:
+                entity = response.json()
+        except ConnectionError as e:
+            logger.error("Error while connecting to JIRA")
+        return entity
+
+    def get_simple_items(self, url, username, password):
+        items = []
+        auth = (username, password)
+        try:
+            response = requests.get(url, auth=auth, headers=headers)
+            if response.status_code != 200:
+                raise JiraException(response.status_code, response.reason, response.text)
+            else:
+                for i in response.json():
+                    id = i.get("id")
+                    name = i.get("name")                    
+                    item = { "id": id, "name": name}
+                    items.append(item)
+        except ConnectionError as e:
+            logger.error("Error while connecting to JIRA")
+        return items
+
+    def get_issue_types(self, jira_url, username, password):
+        return self.get_simple_items(jira_url + "/rest/api/2/issuetype", username, password)
         
-class UnauthorizedException(Exception):
-    pass
+    def get_projects(self, jira_url, username, password):
+        return self.get_simple_items(jira_url + "/rest/api/2/project", username, password)
+
+class JiraException(Exception):
+
+    def __init__(self, code, reason, text):
+        self.code = code
+        self.reason = reason
+        self.text = text

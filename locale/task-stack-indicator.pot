@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-05 17:08+0100\n"
+"POT-Creation-Date: 2015-08-23 23:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,46 +17,58 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:181
-msgid "Configuration"
-msgstr ""
-
-#: gui.glade:331
-msgid "Days to Due Date"
-msgstr ""
-
-#: gui.glade:58
-msgid "Description"
-msgstr ""
-
-#: gui.glade:206
-msgid "Jira URL"
-msgstr ""
-
-#: gui.glade:219
-msgid "Password"
-msgstr ""
-
-#: gui.glade:233
-msgid "Refresh Period"
-msgstr ""
-
-#: gui.glade:33
-msgid "Summary"
-msgstr ""
-
 #: gui.glade:8
 msgid "Task"
 msgstr ""
 
-#: gui.glade:368
-msgid "Task Limit"
+#: gui.glade:102
+msgid "Summary"
 msgstr ""
 
-#: gui.glade:292
+#: gui.glade:126
+msgid "Description"
+msgstr ""
+
+#: gui.glade:175
+msgid "Jira Project and Issue Type"
+msgstr ""
+
+#: gui.glade:241
+msgid "Jira Project"
+msgstr ""
+
+#: gui.glade:253
+msgid "Jira Issue Type"
+msgstr ""
+
+#: gui.glade:313
+msgid "Preferences"
+msgstr ""
+
+#: gui.glade:379
+msgid "Jira URL"
+msgstr ""
+
+#: gui.glade:391
+msgid "Password"
+msgstr ""
+
+#: gui.glade:404
+msgid "Refresh Period"
+msgstr ""
+
+#: gui.glade:467
 msgid "Username"
 msgstr ""
 
-#: gui.glade:305
+#: gui.glade:479
 msgid "Watching Days"
+msgstr ""
+
+#: gui.glade:506
+msgid "Days to Due Date"
+msgstr ""
+
+#: gui.glade:546
+msgid "Task Limit"
 msgstr ""
