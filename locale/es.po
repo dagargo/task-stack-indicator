@@ -43,7 +43,7 @@ msgstr "Tipo de Asunto de Jira"
 
 #: gui.glade:313
 msgid "Preferences"
-msgstr "Preferecias"
+msgstr "Preferencias"
 
 #: gui.glade:379
 msgid "Jira URL"
