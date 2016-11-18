@@ -184,7 +184,7 @@ class TaskStackIndicator(object):
         if self.is_jira_enabled():
             due = self.config[DUE_DATE]
             if due > 0:
-                self.add_sub_menu(menu, _("Tasks with due date in n days").format(due), self.in_due)            
+                self.add_sub_menu(menu, _("Tasks with due date in n days").format(due), self.in_due)
 
             self.add_sub_menu(menu, _("Non planned tasks"), self.not_planned)
 
@@ -210,7 +210,7 @@ class TaskStackIndicator(object):
         self.add_item(menu, Gtk.STOCK_QUIT, lambda widget: self.exit())
 
         self.indicator.set_menu(menu)
-        
+
     def add_sub_menu(self, menu, msg, tasks):
         item = Gtk.ImageMenuItem(msg)
         item.show()
@@ -218,7 +218,7 @@ class TaskStackIndicator(object):
         menu.append(item)
         self.add_tasks_to_menu(item.get_submenu(), tasks, self.open_url)
         item.set_sensitive(tasks)
-            
+
     def add_item(self, menu, text, l):
         item = Gtk.ImageMenuItem.new_from_stock(text)
         item.connect("activate", l)
@@ -260,11 +260,15 @@ class TaskStackIndicator(object):
             if image_url:
                 pixbuf = self.jira_client.get_image(image_url)
             else:
-                pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
-            image = Gtk.Image()
-            image.set_from_pixbuf(pixbuf)
-            item.set_image(image)
-            item.set_always_show_image(True);
+                try:
+                    pixbuf = Gtk.IconTheme.get_default().load_icon("tomboy-panel", 22, Gtk.IconLookupFlags.FORCE_SVG)
+                except GLib.Error as e:
+                    pixbuf = None
+            if pixbuf:
+                image = Gtk.Image()
+                image.set_from_pixbuf(pixbuf)
+                item.set_image(image)
+                item.set_always_show_image(True);
             item.connect("activate", callback, task.get(ID))
             item.show()
             menu.append(item)
@@ -283,7 +287,7 @@ class TaskStackIndicator(object):
         self.load_in_progress_issues()
         self.load_not_planned_issues()
         self.load_projects()
-        self.load_issue_types()        
+        self.load_issue_types()
         self.update_icon_and_menu()
 
     def update_periodically(self):
@@ -295,7 +299,7 @@ class TaskStackIndicator(object):
         fd = open(DATA_FILE, 'w')
         fd.write(json.dumps(self.tasks))
         fd.close()
-        
+
     def save_config(self):
         fd = open(CONFIG_FILE, 'w')
         fd.write(json.dumps(self.config))
@@ -334,7 +338,7 @@ class TaskStackIndicator(object):
                 self.projects = self.jira_client.get_projects(jira_url, self.config[USERNAME], self.config[PASSWORD])
             except JiraException as e:
                 self.process_jira_exception(e)
-        
+
     def load_issue_types(self):
         jira_url = self.config[JIRA_URL]
         if self.is_jira_enabled():
@@ -364,7 +368,7 @@ class TaskStackIndicatorGladeWindow(object):
         self.window.connect("delete-event", lambda widget, event: widget.hide() or True)
         self.window.set_icon_from_file(APP_FILE)
         self.window.set_position(Gtk.WindowPosition.CENTER)
-        
+
 class ConfigurationWindow(TaskStackIndicatorGladeWindow):
 
     def __init__(self, task_stack_indicator):
@@ -380,7 +384,7 @@ class ConfigurationWindow(TaskStackIndicatorGladeWindow):
         self.spin_due = self.builder.get_object(DUE_DATE)
         self.spin_watching = self.builder.get_object(WATCHING)
         self.accept_button.connect("clicked", lambda widget: self.save_config())
-    
+
     def load(self):
         self.spin_task_limit.set_value(self.task_stack_indicator.config[TASK_LIMIT])
         self.entry_jira_url.set_text(self.task_stack_indicator.config[JIRA_URL])
@@ -425,10 +429,10 @@ class TaskWindow(TaskStackIndicatorGladeWindow):
         self.description_buffer = self.builder.get_object("description_buffer")
         self.delete_button = self.builder.get_object("task_delete_button")
         self.upload_button = self.builder.get_object("task_upload_button")
-        
+
     def set_data(self, summary, description):
         self.summary_entry.set_text(summary)
-        self.description_buffer.set_text(description)        
+        self.description_buffer.set_text(description)
 
 class CreateTaskWindow(TaskWindow):
 
@@ -447,7 +451,7 @@ class EditTaskWindow(TaskWindow):
         self.delete_button.connect("clicked", lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task, task[ID]))
         self.upload_button.connect("clicked", lambda widget: GLib.idle_add(self.upload_task))
         self.update_upload_button()
-        self.summary_entry.set_text(task[SUMMARY])    
+        self.summary_entry.set_text(task[SUMMARY])
         description = task[DESCRIPTION]
         self.description_buffer.set_text(description)
 
@@ -481,7 +485,7 @@ class IssueFieldsTaskWindow(TaskStackIndicatorGladeWindow):
         self.projects_combo.pack_start(cell, True)
         self.projects_combo.add_attribute(cell, 'text', 1)
         self.projects_combo.set_active(0)
-        
+
         self.issue_types_combo = self.builder.get_object("issue_types_combobox")
         self.issue_types_model = Gtk.ListStore(str, str)
         for issue_type in issue_types:
@@ -493,7 +497,7 @@ class IssueFieldsTaskWindow(TaskStackIndicatorGladeWindow):
         self.issue_types_combo.set_active(0)
 
         self.accept_button.connect("clicked", lambda widget: GLib.idle_add(self.open_new_issue))
-        
+
     def open_new_issue(self):
         project_id = self.projects_model[self.projects_combo.get_active()][0]
         issue_type_id = self.issue_types_model[self.issue_types_combo.get_active()][0]
