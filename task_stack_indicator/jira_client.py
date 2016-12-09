@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2014 David García Goñi
+# Copyright 2016 David García Goñi
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,15 @@ from gi.repository import GdkPixbuf
 
 logger = logging.getLogger(__name__)
 headers = {"Content-Type": "application/json", "Accept" : "application/json"}
+
+IN_PROGRESS_JQL = 'assignee = currentUser() AND status = \'In progress\' ORDER BY priority DESC'
+NOT_PLANNED_JQL = 'assignee = currentUser() AND (duedate is EMPTY OR fixVersion is EMPTY) AND status != Closed ORDER BY priority DESC'
+WATCHED_JQL = 'watcher = currentUser() AND updatedDate > -{:d}d ORDER BY updatedDate DESC'
+IN_DUE_JQL = 'assignee = currentUser() AND status != Closed AND duedate < {:d}d ORDER BY duedate ASC, priority DESC'
+CREATE_ISSUE_URL = '{:s}/secure/CreateIssueDetails!init.jspa?pid={:s}&issuetype={:s}&summary={:s}&description={:s}&assignee={:s}&reporter={:s}'
+
+def get_new_issue_url(jira_url, project_id, issue_type_id, summary, description, user):
+    return CREATE_ISSUE_URL.format(jira_url, project_id, issue_type_id, summary, description, user, user)
 
 class JiraClient(object):
 
@@ -96,7 +105,7 @@ class JiraClient(object):
             else:
                 for i in response.json():
                     id = i.get("id")
-                    name = i.get("name")                    
+                    name = i.get("name")
                     item = { "id": id, "name": name}
                     items.append(item)
         except ConnectionError as e:
@@ -105,7 +114,7 @@ class JiraClient(object):
 
     def get_issue_types(self, jira_url, username, password):
         return self.get_simple_items(jira_url + "/rest/api/2/issuetype", username, password)
-        
+
     def get_projects(self, jira_url, username, password):
         return self.get_simple_items(jira_url + "/rest/api/2/project", username, password)
 

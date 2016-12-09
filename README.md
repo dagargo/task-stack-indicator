@@ -17,7 +17,9 @@ Installation
 ------------
 
 The package dependencies for Ubuntu are
-- libappindicator3-1
-- python3
+- libappindicator3-1,
+- python3.
 
 To install them, simply execute `sudo apt-get install libappindicator3-1 python3`.
+
+In Debian, `gir1.2-appindicator3-0.1` must be installed.

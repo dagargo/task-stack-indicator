@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+
+from task_stack_indicator.indicator import Indicator
+
+Indicator().main()
