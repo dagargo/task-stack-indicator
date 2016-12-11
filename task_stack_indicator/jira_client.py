@@ -20,6 +20,7 @@ import requests
 from requests.exceptions import ConnectionError
 from threading import Lock
 from gi.repository import GdkPixbuf
+from task_stack_indicator.simple_rest_client import RestException
 
 logger = logging.getLogger(__name__)
 headers = {"Content-Type": "application/json", "Accept" : "application/json"}
@@ -46,7 +47,7 @@ class JiraClient(object):
         try:
             response = requests.get(jql_url, auth=auth, headers=headers)
             if response.status_code != 200:
-                raise JiraException(response.status_code, response.reason, response.text)
+                raise RestException(response.status_code, response.reason, response.text)
             else:
                 for issue in response.json().get("issues"):
                     fields = issue.get("fields")
@@ -88,7 +89,7 @@ class JiraClient(object):
         try:
             response = requests.post(post_url, auth=auth, headers=headers, data=issue)
             if response.status_code != 201:
-                raise JiraException(response.status_code, response.reason, response.text)
+                raise RestException(response.status_code, response.reason, response.text)
             else:
                 entity = response.json()
         except ConnectionError as e:
@@ -101,7 +102,7 @@ class JiraClient(object):
         try:
             response = requests.get(url, auth=auth, headers=headers)
             if response.status_code != 200:
-                raise JiraException(response.status_code, response.reason, response.text)
+                raise RestException(response.status_code, response.reason, response.text)
             else:
                 for i in response.json():
                     id = i.get("id")
@@ -117,10 +118,3 @@ class JiraClient(object):
 
     def get_projects(self, jira_url, username, password):
         return self.get_simple_items(jira_url + "/rest/api/2/project", username, password)
-
-class JiraException(Exception):
-
-    def __init__(self, code, reason, text):
-        self.code = code
-        self.reason = reason
-        self.text = text

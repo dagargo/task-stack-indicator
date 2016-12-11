@@ -40,7 +40,8 @@ from task_stack_indicator.windows import IssueFieldsTaskWindow
 import task_stack_indicator.common as common
 import task_stack_indicator.jira_client as jira_client
 from task_stack_indicator.jira_client import JiraClient
-from task_stack_indicator.jira_client import JiraException
+from task_stack_indicator.simple_rest_client import RestException
+import task_stack_indicator.simple_rest_client as src
 import sys
 import getopt
 
@@ -60,6 +61,8 @@ STATUS_ICON_FILE = 'task-stack-indicator-%d'
 
 def print_help():
     print ('Usage: {:s} [-v]'.format(APP_NAME))
+
+log_level = logging.INFO
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "hv")
@@ -122,7 +125,9 @@ class Indicator(object):
         with self.lock:
             if self.config[common.TASKS_URL]:
                 logger.debug('Loading remote tasks...')
-                self.tasks = []
+                self.tasks = src.get_tasks(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+                for task in self.tasks:
+                    task['image_url'] = None
                 self.save_tasks()
             else:
                 logger.debug('Loading local tasks...')
@@ -155,14 +160,14 @@ class Indicator(object):
         if self.is_jira_enabled():
             try:
                 issues = self.jira_client.get_issues(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD], jql)
-            except JiraException as e:
-                self.process_jira_exception(e)
+            except RestException as e:
+                self.process_rest_exception(e)
         return issues
 
-    def process_jira_exception(self, exception):
+    def process_rest_exception(self, exception):
         if exception.code == 401:
             self.authorized = False
-        message = "Error {:d} ({:s}) while connecting to JIRA: {:s}".format(exception.code, exception.reason, exception.text)
+        message = "Error {:d} ({:s}) while connecting to url: {:s}".format(exception.code, exception.reason, exception.text)
         logger.error(message)
 
     def update_icon_and_menu(self):
@@ -324,6 +329,9 @@ class Indicator(object):
         self.create_task_window.window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Creating remote task...')
+            task = {common.SUMMARY : summary, common.DESCRIPTION : description}
+            src.create_task(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            self.load_tasks()
         else:
             logger.debug('Creating local task...')
             with self.lock:
@@ -341,6 +349,9 @@ class Indicator(object):
         self.edit_task_windows.pop(id).window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Updating remote task...')
+            task = {common.SUMMARY : summary, common.DESCRIPTION : description}
+            src.update_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            self.load_tasks()
         else:
             logger.debug('Updating local task...')
             with self.lock:
@@ -354,6 +365,8 @@ class Indicator(object):
         self.edit_task_windows.pop(id).window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Deleting remote task...')
+            src.delete_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            self.load_tasks()
         else:
             logger.debug('Deleting local task...')
             with self.lock:
@@ -366,16 +379,16 @@ class Indicator(object):
         if self.is_jira_enabled():
             try:
                 self.projects = self.jira_client.get_projects(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
-            except JiraException as e:
-                self.process_jira_exception(e)
+            except RestException as e:
+                self.process_rest_exception(e)
 
     def load_issue_types(self):
         jira_url = self.config[common.JIRA_URL]
         if self.is_jira_enabled():
             try:
                 self.issue_types = self.jira_client.get_issue_types(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
-            except JiraException as e:
-                self.process_jira_exception(e)
+            except RestException as e:
+                self.process_rest_exception(e)
 
     def is_jira_enabled(self):
         jira_url = self.config[common.JIRA_URL]
