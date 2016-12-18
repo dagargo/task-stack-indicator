@@ -22,10 +22,10 @@ import json
 
 logger = logging.getLogger(__name__)
 
-def get_tasks(url, username, password, headers=None):
+def get_tasks(url, username, password, headers=None, verify=False):
     auth = (username, password)
     try:
-        response = requests.get(url, auth=auth, headers=headers, verify=False)
+        response = requests.get(url, auth=auth, headers=headers, verify=verify)
         if response.status_code != 200:
             raise RestException(response.status_code, response.reason, response.text)
         else:
@@ -35,32 +35,36 @@ def get_tasks(url, username, password, headers=None):
         logger.error("Error while connecting to " + url)
         return []
 
-def create_task(url, username, password, task, headers=None):
+def create_task(url, username, password, task, headers=None, verify=False):
+    auth = (username, password)
+    new_task = None
+    try:
+        data = json.dumps(task)
+        response = requests.post(url, auth=auth, headers=headers, data=data, verify=verify)
+        if response.status_code != 201:
+            raise RestException(response.status_code, response.reason, response.text)
+        else:
+            new_task = response.json()
+    except ConnectionError as e:
+        logger.error(e)
+        logger.error("Error while connecting to " + url)
+    return new_task
+
+def update_task(url, username, password, task, headers=None, verify=False):
     auth = (username, password)
     try:
         data = json.dumps(task)
-        response = requests.post(url, auth=auth, headers=headers, data=data, verify=False)
+        response = requests.put(url, auth=auth, headers=headers, data=data, verify=verify)
         if response.status_code != 200:
             raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:
         logger.error(e)
         logger.error("Error while connecting to " + url)
 
-def update_task(url, username, password, task, headers=None):
+def delete_task(url, username, password, headers=None, verify=False):
     auth = (username, password)
     try:
-        data = json.dumps(task)
-        response = requests.put(url, auth=auth, headers=headers, data=data, verify=False)
-        if response.status_code != 200:
-            raise RestException(response.status_code, response.reason, response.text)
-    except ConnectionError as e:
-        logger.error(e)
-        logger.error("Error while connecting to " + url)
-
-def delete_task(url, username, password, headers=None):
-    auth = (username, password)
-    try:
-        response = requests.delete(url, auth=auth, headers=headers, verify=False)
+        response = requests.delete(url, auth=auth, headers=headers, verify=verify)
         if response.status_code != 200:
             raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:

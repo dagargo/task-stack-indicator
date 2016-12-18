@@ -88,6 +88,8 @@ class Indicator(object):
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         self.config = common.new_config()
         self.tasks = []
+        #TODO: move to jira_client.
+        #This is needed to avoid JIRA to disable the account if the maximum tries has been reached
         self.authorized = True
         self.load_config()
         self.in_progress = []
@@ -97,7 +99,7 @@ class Indicator(object):
         self.projects = []
         self.issue_types = []
         self.lock = Lock()
-        self.load_tasks()
+#        self.load_tasks()
         self.edit_task_windows = {}
         self.create_task_window = CreateTaskWindow(self)
         self.configuration_window = ConfigurationWindow(self)
@@ -122,15 +124,16 @@ class Indicator(object):
             file.close()
 
     def load_tasks(self):
-        with self.lock:
-            if self.config[common.TASKS_URL]:
-                logger.debug('Loading remote tasks...')
-                self.tasks = src.get_tasks(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
-                for task in self.tasks:
-                    task['image_url'] = None
+        if self.config[common.TASKS_URL]:
+            logger.debug('Loading remote tasks...')
+            self.tasks = src.get_tasks(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            for task in self.tasks:
+                task['image_url'] = None
+            with self.lock:
                 self.save_tasks()
-            else:
-                logger.debug('Loading local tasks...')
+        else:
+            logger.debug('Loading local tasks...')
+        with self.lock:
             try:
                 file = open(DATA_FILE, 'r')
                 self.tasks = json.loads(file.read())
@@ -330,19 +333,19 @@ class Indicator(object):
         if self.config[common.TASKS_URL]:
             logger.debug('Creating remote task...')
             task = {common.SUMMARY : summary, common.DESCRIPTION : description}
-            src.create_task(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
-            self.load_tasks()
+            new_task = src.create_task(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            new_task[common.IMAGE_URL] = None
         else:
             logger.debug('Creating local task...')
-            with self.lock:
-                ntasks = len(self.tasks);
-                if ntasks > 0:
-                    last_task_id = self.tasks[ntasks - 1][common.ID]
-                else:
-                    last_task_id = 0
-                task = {common.IMAGE_URL: None, common.SUMMARY : summary, common.ID : last_task_id + 1, common.DESCRIPTION : description}
-                self.tasks.append(task)
-                self.save_tasks()
+            ntasks = len(self.tasks);
+            if ntasks > 0:
+                next_task_id = self.tasks[ntasks - 1][common.ID] + 1
+            else:
+                next_task_id = 0
+            new_task = {common.IMAGE_URL: None, common.SUMMARY : summary, common.ID : next_task_id, common.DESCRIPTION : description}
+        with self.lock:
+            self.tasks.append(new_task)
+            self.save_tasks()
         self.update_icon_and_menu()
 
     def update_task(self, id, summary, description):
@@ -351,14 +354,13 @@ class Indicator(object):
             logger.debug('Updating remote task...')
             task = {common.SUMMARY : summary, common.DESCRIPTION : description}
             src.update_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
-            self.load_tasks()
         else:
             logger.debug('Updating local task...')
-            with self.lock:
-                task = self.get_task_by_id(id)
-                task[common.SUMMARY] = summary
-                task[common.DESCRIPTION] = description
-                self.save_tasks()
+        with self.lock:
+            task = self.get_task_by_id(id)
+            task[common.SUMMARY] = summary
+            task[common.DESCRIPTION] = description
+            self.save_tasks()
         self.update_icon_and_menu()
 
     def delete_task(self, id):
@@ -366,12 +368,11 @@ class Indicator(object):
         if self.config[common.TASKS_URL]:
             logger.debug('Deleting remote task...')
             src.delete_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
-            self.load_tasks()
         else:
             logger.debug('Deleting local task...')
-            with self.lock:
-                self.tasks.remove(self.get_task_by_id(id))
-                self.save_tasks()
+        with self.lock:
+            self.tasks.remove(self.get_task_by_id(id))
+            self.save_tasks()
         self.update_icon_and_menu()
 
     def load_projects(self):
