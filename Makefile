@@ -1,21 +1,22 @@
 name = task-stack-indicator
-python_name = task_stack_indicator.py
+icons = /usr/share/icons
 
 install:
 	python3 setup.py install
 	cp res/$(name) /usr/local/bin
 	cp res/$(name).desktop /usr/share/applications
-	cp res/task-stack-indicator.svg /usr/share/icons/gnome/128x128/apps/task-stack-indicator.svg
-	if [ -d /usr/share/icons/ubuntu-mono-dark ]; then \
-		cp res/dark/*  /usr/share/icons/ubuntu-mono-dark/status/22; \
-		cp res/light/* /usr/share/icons/ubuntu-mono-light/status/22; \
+	cp res/task-stack-indicator.svg $(icons)/gnome/scalable/apps/task-stack-indicator.svg
+	if [ ! -d $(icons)/gnome/48x48/status ]; then \
+		mkdir -p $(icons)/gnome/48x48/status; \
 	fi
-	cp res/dark/*  /usr/share/icons/gnome/48x48/status
-	if [ -d /usr/share/icons/ubuntu-mono-dark ]; then \
-		gtk-update-icon-cache -f /usr/share/icons/ubuntu-mono-dark; \
-		gtk-update-icon-cache -f /usr/share/icons/ubuntu-mono-light; \
+	cp res/dark/*  $(icons)/gnome/48x48/status
+	gtk-update-icon-cache -f -t  $(icons)/gnome
+	if [ -d $(icons)/ubuntu-mono-dark ]; then \
+		cp res/dark/*  $(icons)/ubuntu-mono-dark/status/22; \
+		cp res/light/* $(icons)/ubuntu-mono-light/status/22; \
+		gtk-update-icon-cache -f -t  $(icons)/ubuntu-mono-dark; \
+		gtk-update-icon-cache -f -t  $(icons)/ubuntu-mono-light; \
 	fi
-	gtk-update-icon-cache -f /usr/share/icons/gnome
 	for po in locale/*.po; do \
 		locale=$${po%.*}; \
 		dest_dir="/usr/share/$$locale/LC_MESSAGES/"; \
@@ -26,15 +27,15 @@ install:
 uninstall:
 	rm -f /usr/local/bin/$(name)
 	rm -f /usr/share/applications/$(name).desktop
-	rm /usr/share/icons/gnome/128x128/apps/task-stack-indicator.svg
-	rm -f /usr/share/icons/ubuntu-mono-dark/status/22/task-stack-indicator-*.svg
-	rm -f /usr/share/icons/ubuntu-mono-light/status/22/task-stack-indicator-*.svg
-	rm -f /usr/share/icons/gnome/48x48/status/task-stack-indicator-*.svg
-	if [ -d /usr/share/icons/ubuntu-mono-dark ]; then \
-		gtk-update-icon-cache -f /usr/share/icons/ubuntu-mono-dark; \
-		gtk-update-icon-cache -f /usr/share/icons/ubuntu-mono-light; \
+	rm -f $(icons)/gnome/scalable/apps/task-stack-indicator.svg
+	rm -f $(icons)/gnome/48x48/status/task-stack-indicator-*.svg
+	gtk-update-icon-cache -f -t  $(icons)/gnome
+	if [ -d $(icons)/ubuntu-mono-dark ]; then \
+		rm -f $(icons)/ubuntu-mono-dark/status/22/task-stack-indicator-*.svg; \
+		rm -f $(icons)/ubuntu-mono-light/status/22/task-stack-indicator-*.svg; \
+		gtk-update-icon-cache -f -t  $(icons)/ubuntu-mono-dark; \
+		gtk-update-icon-cache -f -t  $(icons)/ubuntu-mono-light; \
 	fi
-	gtk-update-icon-cache -f /usr/share/icons/gnome
 	for po in locale/*.po; do \
 		locale=$${po%.*}; \
 		dest_dir="/usr/share/$$locale/LC_MESSAGES/"; \
