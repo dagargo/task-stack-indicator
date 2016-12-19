@@ -76,6 +76,11 @@ for opt, arg in opts:
     elif opt == '-v':
         log_level = logging.DEBUG
 
+try:
+    tomboy_pixbuf = Gtk.IconTheme.get_default().load_icon('tomboy-panel', 22, Gtk.IconLookupFlags.FORCE_SVG)
+except GLib.Error as e:
+    tomboy_pixbuf = None
+
 logging.basicConfig(level=log_level)
 logger = logging.getLogger(__name__)
 
@@ -99,7 +104,6 @@ class Indicator(object):
         self.projects = []
         self.issue_types = []
         self.lock = Lock()
-#        self.load_tasks()
         self.edit_task_windows = {}
         self.create_task_window = CreateTaskWindow(self)
         self.configuration_window = ConfigurationWindow(self)
@@ -179,6 +183,7 @@ class Indicator(object):
         icon = STATUS_ICON_FILE % total
         if icon != self.indicator.get_icon():
             #This will trigger a call to update_menu
+            logger.debug('Setting icon to {:s}...'.format(icon))
             self.indicator.set_icon(icon)
         else:
             GLib.idle_add(self.update_menu)
@@ -283,10 +288,7 @@ class Indicator(object):
             if image_url:
                 pixbuf = self.jira_client.get_image(image_url)
             else:
-                try:
-                    pixbuf = Gtk.IconTheme.get_default().load_icon('tomboy-panel', 22, Gtk.IconLookupFlags.FORCE_SVG)
-                except GLib.Error as e:
-                    pixbuf = None
+                pixbuf = tomboy_pixbuf
             if pixbuf:
                 image = Gtk.Image()
                 image.set_from_pixbuf(pixbuf)
