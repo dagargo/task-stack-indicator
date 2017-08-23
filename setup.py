@@ -4,7 +4,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='TaskStackIndicator',
-    version='0.1',
+    version='0.2',
     description='Task stack indicator',
     author='David García Goñi',
     author_email='dagargo@gmail.com',
