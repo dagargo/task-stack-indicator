@@ -131,6 +131,7 @@ class Indicator(object):
         if self.config[common.TASKS_URL]:
             logger.debug('Loading remote tasks...')
             self.tasks = src.get_tasks(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            self.tasks = sorted(self.tasks, key=lambda task: task[common.SUMMARY])
             for task in self.tasks:
                 task['image_url'] = None
             with self.lock:
@@ -347,6 +348,7 @@ class Indicator(object):
             new_task = {common.IMAGE_URL: None, common.SUMMARY : summary, common.ID : next_task_id, common.DESCRIPTION : description}
         with self.lock:
             self.tasks.append(new_task)
+            self.tasks = sorted(self.tasks, key=lambda task: task[common.SUMMARY])
             self.save_tasks()
         self.update_icon_and_menu()
 

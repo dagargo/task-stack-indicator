@@ -22,35 +22,35 @@ import json
 
 logger = logging.getLogger(__name__)
 
-def get_tasks(url, username, password, headers=None, verify=False):
+def get_tasks(url, username, password, headers=None, verify=True):
     auth = (username, password)
     try:
         response = requests.get(url, auth=auth, headers=headers, verify=verify)
-        if response.status_code != 200:
-            raise RestException(response.status_code, response.reason, response.text)
-        else:
+        if response.status_code == 200:
             return response.json()
+        else:
+            raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:
         logger.error(e)
         logger.error("Error while connecting to " + url)
         return []
 
-def create_task(url, username, password, task, headers=None, verify=False):
+def create_task(url, username, password, task, headers=None, verify=True):
     auth = (username, password)
     new_task = None
     try:
         data = json.dumps(task)
         response = requests.post(url, auth=auth, headers=headers, data=data, verify=verify)
-        if response.status_code != 201:
-            raise RestException(response.status_code, response.reason, response.text)
-        else:
+        if response.status_code == 201:
             new_task = response.json()
+        else:
+            raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:
         logger.error(e)
         logger.error("Error while connecting to " + url)
     return new_task
 
-def update_task(url, username, password, task, headers=None, verify=False):
+def update_task(url, username, password, task, headers=None, verify=True):
     auth = (username, password)
     try:
         data = json.dumps(task)
@@ -61,7 +61,7 @@ def update_task(url, username, password, task, headers=None, verify=False):
         logger.error(e)
         logger.error("Error while connecting to " + url)
 
-def delete_task(url, username, password, headers=None, verify=False):
+def delete_task(url, username, password, headers=None, verify=True):
     auth = (username, password)
     try:
         response = requests.delete(url, auth=auth, headers=headers, verify=verify)

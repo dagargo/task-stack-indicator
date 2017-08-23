@@ -1,6 +1,11 @@
 name = task-stack-indicator
 icons = /usr/share/icons
 
+all: build
+
+build:
+	python3 setup.py bdist_egg
+
 install:
 	python3 setup.py install
 	cp res/$(name) /usr/local/bin
