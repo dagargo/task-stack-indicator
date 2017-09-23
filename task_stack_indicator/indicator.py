@@ -75,11 +75,6 @@ for opt, arg in opts:
     elif opt == '-v':
         log_level = logging.DEBUG
 
-try:
-    tomboy_pixbuf = Gtk.IconTheme.get_default().load_icon('tomboy-panel', 22, Gtk.IconLookupFlags.FORCE_SVG)
-except GLib.Error as e:
-    tomboy_pixbuf = None
-
 logging.basicConfig(level=log_level)
 logger = logging.getLogger(__name__)
 
@@ -287,9 +282,6 @@ class Indicator(object):
             image_url = task[common.IMAGE_URL]
             if image_url:
                 pixbuf = self.jira_client.get_image(image_url)
-            else:
-                pixbuf = tomboy_pixbuf
-            if pixbuf:
                 image = Gtk.Image()
                 image.set_from_pixbuf(pixbuf)
                 item.set_image(image)
