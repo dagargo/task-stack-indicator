@@ -13,7 +13,7 @@ install:
 	cp res/$(NAME) /usr/local/bin
 	cp res/$(NAME).desktop /usr/share/applications
 	cp res/task-stack-indicator.svg $(ICONS_DIR)
-	cp res/dark/* $(ICONS_DIR)
+	cp res/gnome/* $(ICONS_DIR)
 	gtk-update-icon-cache -f -t  $(ICONS_THEME_DIR)
 	if [ -d $(ICONS_BASEDIR)/ubuntu-mono-dark ]; then \
 		cp res/dark/*  $(ICONS_BASEDIR)/ubuntu-mono-dark/status/22; \
