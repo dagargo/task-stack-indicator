@@ -31,8 +31,8 @@
      id="namedview5704"
      showgrid="false"
      inkscape:zoom="8.1749235"
-     inkscape:cx="10.266206"
-     inkscape:cy="25.480873"
+     inkscape:cx="-14.932807"
+     inkscape:cy="24.991572"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -45,9 +45,14 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
         <cc:license
            rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>David García Goñi</dc:title>
+          </cc:Agent>
+        </dc:creator>
       </cc:Work>
       <cc:License
          rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
