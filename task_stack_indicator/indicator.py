@@ -58,8 +58,10 @@ _ = locale.gettext
 
 STATUS_ICON_FILE = 'task-stack-indicator-%d'
 
+
 def print_help():
     print ('Usage: {:s} [-v]'.format(APP_NAME))
+
 
 log_level = logging.INFO
 
@@ -78,17 +80,18 @@ for opt, arg in opts:
 logging.basicConfig(level=log_level)
 logger = logging.getLogger(__name__)
 
+
 class Indicator(object):
 
     def __init__(self):
         self.indicator = AppIndicator.Indicator.new(APP_NAME,
-                                                STATUS_ICON_FILE % 0,
-                                                AppIndicator.IndicatorCategory.OTHER)
+                                                    STATUS_ICON_FILE % 0,
+                                                    AppIndicator.IndicatorCategory.OTHER)
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         self.config = common.new_config()
         self.tasks = []
-        #TODO: move to jira_client.
-        #This is needed to avoid JIRA to disable the account if the maximum tries has been reached
+        # TODO: move to jira_client.
+        # This is needed to avoid JIRA to disable the account if the maximum tries has been reached
         self.authorized = True
         self.load_config()
         self.in_progress = []
@@ -101,11 +104,13 @@ class Indicator(object):
         self.edit_task_windows = {}
         self.create_task_window = CreateTaskWindow(self)
         self.configuration_window = ConfigurationWindow(self)
-        self.indicator.connect('new-icon', lambda indicator: GLib.idle_add(self.update_menu))
+        self.indicator.connect(
+            'new-icon', lambda indicator: GLib.idle_add(self.update_menu))
         self.about_dialog = common.builder.get_object('about_dialog')
         self.about_dialog.set_position(Gtk.WindowPosition.CENTER)
         self.about_dialog.set_version(version)
-        self.about_dialog.connect('delete_event', lambda widget, event: widget.hide() or True)
+        self.about_dialog.connect(
+            'delete_event', lambda widget, event: widget.hide() or True)
         self.jira_client = JiraClient()
         self.update_icon_and_menu()
 
@@ -124,23 +129,23 @@ class Indicator(object):
     def load_tasks(self):
         if self.config[common.TASKS_URL]:
             logger.debug('Loading remote tasks...')
-            self.tasks = src.get_tasks(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
-            self.tasks = sorted(self.tasks, key=lambda task: task[common.SUMMARY])
+            self.tasks = src.get_tasks(
+                self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            self.tasks = sorted(
+                self.tasks, key=lambda task: task[common.SUMMARY])
             for task in self.tasks:
                 task['image_url'] = None
-            with self.lock:
-                self.save_tasks()
         else:
             logger.debug('Loading local tasks...')
-        with self.lock:
-            try:
-                file = open(DATA_FILE, 'r')
-                self.tasks = json.loads(file.read())
-                logger.debug('Tasks file readed')
-            except IOError as e:
-                logger.error('Error while reading tasks file')
-            else:
-                file.close()
+            with self.lock:
+                try:
+                    file = open(DATA_FILE, 'r')
+                    self.tasks = json.loads(file.read())
+                    logger.debug('Tasks file readed')
+                except IOError as e:
+                    logger.error('Error while reading tasks file')
+                else:
+                    file.close()
 
     def load_in_progress_issues(self):
         self.in_progress = self.load_jira_issues(jira_client.IN_PROGRESS_JQL)
@@ -161,7 +166,8 @@ class Indicator(object):
         jira_url = self.config[common.JIRA_URL]
         if self.is_jira_enabled():
             try:
-                issues = self.jira_client.get_issues(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD], jql)
+                issues = self.jira_client.get_issues(
+                    jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD], jql)
             except RestException as e:
                 self.process_rest_exception(e)
         return issues
@@ -169,15 +175,17 @@ class Indicator(object):
     def process_rest_exception(self, exception):
         if exception.code == 401:
             self.authorized = False
-        message = "Error {:d} ({:s}) while connecting to url: {:s}".format(exception.code, exception.reason, exception.text)
+        message = "Error {:d} ({:s}) while connecting to url: {:s}".format(
+            exception.code, exception.reason, exception.text)
         logger.error(message)
 
     def update_icon_and_menu(self):
         total_in_progress = len(self.in_progress) + len(self.tasks)
-        total = min(round(total_in_progress * 5.0 / self.config[common.TASK_LIMIT]), 5)
+        total = min(round(total_in_progress * 5.0 /
+                          self.config[common.TASK_LIMIT]), 5)
         icon = STATUS_ICON_FILE % total
         if icon != self.indicator.get_icon():
-            #This will trigger a call to update_menu
+            # This will trigger a call to update_menu
             logger.debug('Setting icon to {:s}...'.format(icon))
             self.indicator.set_icon(icon)
         else:
@@ -187,7 +195,8 @@ class Indicator(object):
         menu = Gtk.Menu()
 
         if self.tasks:
-            self.add_tasks_to_menu(menu, self.tasks, self.show_edit_task_window)
+            self.add_tasks_to_menu(
+                menu, self.tasks, self.show_edit_task_window)
             separator = Gtk.SeparatorMenuItem()
             separator.show()
             menu.append(separator)
@@ -198,24 +207,29 @@ class Indicator(object):
         if self.is_jira_enabled():
             due = self.config[common.DUE_DAYS]
             if due > 0:
-                self.add_sub_menu(menu, _('Tasks with due date in n days').format(due), self.in_due)
+                self.add_sub_menu(
+                    menu, _('Tasks with due date in n days').format(due), self.in_due)
 
             self.add_sub_menu(menu, _('Non planned tasks'), self.not_planned)
 
             watching = self.config[common.WATCHING]
             if watching > 0:
-                self.add_sub_menu(menu, _('Watched tasks updated in the last n days').format(watching), self.watched)
+                self.add_sub_menu(menu, _('Watched tasks updated in the last n days').format(
+                    watching), self.watched)
 
             if self.in_due or self.not_planned or self.watched:
-	            separator = Gtk.SeparatorMenuItem()
-	            separator.show()
-	            menu.append(separator)
+                separator = Gtk.SeparatorMenuItem()
+                separator.show()
+                menu.append(separator)
 
-        self.add_item(menu, Gtk.STOCK_ADD, lambda widget: self.show_create_task_window())
+        self.add_item(menu, Gtk.STOCK_ADD,
+                      lambda widget: self.show_create_task_window())
 
-        self.add_item(menu, Gtk.STOCK_REFRESH, lambda widget: self.force_update_interface())
+        self.add_item(menu, Gtk.STOCK_REFRESH,
+                      lambda widget: self.force_update_interface())
 
-        self.add_item(menu, Gtk.STOCK_PREFERENCES, lambda widget: self.configuration_window.open())
+        self.add_item(menu, Gtk.STOCK_PREFERENCES,
+                      lambda widget: self.configuration_window.open())
 
         separator = Gtk.SeparatorMenuItem()
         separator.show()
@@ -263,7 +277,8 @@ class Indicator(object):
         edit_task_window = self.edit_task_windows.get(id)
         if edit_task_window:
             if not edit_task_window.window.props.visible:
-                edit_task_window.set_data(task[common.SUMMARY], task[common.DESCRIPTION])
+                edit_task_window.set_data(
+                    task[common.SUMMARY], task[common.DESCRIPTION])
                 edit_task_window.update_upload_button()
         else:
             edit_task_window = EditTaskWindow(self, task)
@@ -285,7 +300,7 @@ class Indicator(object):
                 image = Gtk.Image()
                 image.set_from_pixbuf(pixbuf)
                 item.set_image(image)
-                item.set_always_show_image(True);
+                item.set_always_show_image(True)
             item.connect('activate', callback, task.get(common.ID))
             item.show()
             menu.append(item)
@@ -295,7 +310,7 @@ class Indicator(object):
         self.update_interface_in_background()
 
     def update_interface_in_background(self):
-        Thread(target = self.update_interface).start()
+        Thread(target=self.update_interface).start()
 
     def update_interface(self):
         self.load_tasks()
@@ -326,55 +341,64 @@ class Indicator(object):
         self.create_task_window.window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Creating remote task...')
-            task = {common.SUMMARY : summary, common.DESCRIPTION : description}
-            new_task = src.create_task(self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            task = {common.SUMMARY: summary, common.DESCRIPTION: description}
+            new_task = src.create_task(
+                self.config[common.TASKS_URL], self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
             new_task[common.IMAGE_URL] = None
+            self.load_tasks()
         else:
             logger.debug('Creating local task...')
-            ntasks = len(self.tasks);
-            if ntasks > 0:
-                next_task_id = self.tasks[ntasks - 1][common.ID] + 1
-            else:
-                next_task_id = 0
-            new_task = {common.IMAGE_URL: None, common.SUMMARY : summary, common.ID : next_task_id, common.DESCRIPTION : description}
-        with self.lock:
-            self.tasks.append(new_task)
-            self.tasks = sorted(self.tasks, key=lambda task: task[common.SUMMARY])
-            self.save_tasks()
+            next_task_id = -1
+            for t in self.tasks:
+                if t[common.ID] > next_task_id:
+                    next_task_id = t[common.ID]
+            next_task_id += 1
+            new_task = {common.IMAGE_URL: None, common.SUMMARY: summary,
+                        common.ID: next_task_id, common.DESCRIPTION: description}
+            with self.lock:
+                self.tasks.append(new_task)
+                self.tasks = sorted(
+                    self.tasks, key=lambda task: task[common.SUMMARY])
+                self.save_tasks()
         self.update_icon_and_menu()
 
     def update_task(self, id, summary, description):
         self.edit_task_windows.pop(id).window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Updating remote task...')
-            task = {common.SUMMARY : summary, common.DESCRIPTION : description}
-            src.update_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            task = {common.SUMMARY: summary, common.DESCRIPTION: description}
+            src.update_task(self.config[common.TASKS_URL] + '/' + id,
+                            self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD], task)
+            self.load_tasks()
         else:
             logger.debug('Updating local task...')
-        with self.lock:
-            task = self.get_task_by_id(id)
-            task[common.SUMMARY] = summary
-            task[common.DESCRIPTION] = description
-            self.save_tasks()
+            with self.lock:
+                task = self.get_task_by_id(id)
+                task[common.SUMMARY] = summary
+                task[common.DESCRIPTION] = description
+                self.save_tasks()
         self.update_icon_and_menu()
 
     def delete_task(self, id):
         self.edit_task_windows.pop(id).window.hide()
         if self.config[common.TASKS_URL]:
             logger.debug('Deleting remote task...')
-            src.delete_task(self.config[common.TASKS_URL] + '/' + id, self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            src.delete_task(self.config[common.TASKS_URL] + '/' + id,
+                            self.config[common.TASKS_USERNAME], self.config[common.TASKS_PASSWORD])
+            self.load_tasks()
         else:
             logger.debug('Deleting local task...')
-        with self.lock:
-            self.tasks.remove(self.get_task_by_id(id))
-            self.save_tasks()
+            with self.lock:
+                self.tasks.remove(self.get_task_by_id(id))
+                self.save_tasks()
         self.update_icon_and_menu()
 
     def load_projects(self):
         jira_url = self.config[common.JIRA_URL]
         if self.is_jira_enabled():
             try:
-                self.projects = self.jira_client.get_projects(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
+                self.projects = self.jira_client.get_projects(
+                    jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
             except RestException as e:
                 self.process_rest_exception(e)
 
@@ -382,13 +406,14 @@ class Indicator(object):
         jira_url = self.config[common.JIRA_URL]
         if self.is_jira_enabled():
             try:
-                self.issue_types = self.jira_client.get_issue_types(jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
+                self.issue_types = self.jira_client.get_issue_types(
+                    jira_url, self.config[common.JIRA_USERNAME], self.config[common.JIRA_PASSWORD])
             except RestException as e:
                 self.process_rest_exception(e)
 
     def is_jira_enabled(self):
         jira_url = self.config[common.JIRA_URL]
-        return jira_url and self.authorized;
+        return jira_url and self.authorized
 
     def show_about(self):
         self.about_dialog.show()
@@ -400,6 +425,7 @@ class Indicator(object):
     def main(self):
         self.update_periodically()
         Gtk.main()
+
 
 if __name__ == "__main__":
     Indicator().main()

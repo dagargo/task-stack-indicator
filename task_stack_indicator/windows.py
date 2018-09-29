@@ -79,10 +79,7 @@ class ConfigurationWindow(TaskStackIndicatorWindow):
         self.task_stack_indicator.config[common.DUE_DAYS] = int(self.spin_due.get_value())
         self.task_stack_indicator.config[common.WATCHING] = int(self.spin_watching.get_value())
         self.task_stack_indicator.save_config()
-        self.task_stack_indicator.authorized = True
-        #We refresh the interface first because the queries can take a while
-        self.task_stack_indicator.update_icon_and_menu()
-        self.task_stack_indicator.update_interface_in_background()
+        self.task_stack_indicator.force_update_interface()
 
 class TaskWindow(TaskStackIndicatorWindow):
 
@@ -99,7 +96,6 @@ class TaskWindow(TaskStackIndicatorWindow):
         self.description_buffer = self.builder.get_object('description_buffer')
         self.delete_button = self.builder.get_object('task_delete_button')
         self.upload_button = self.builder.get_object('task_upload_button')
-
 
     def set_data(self, summary, description):
         self.summary_entry.set_text(summary)
@@ -121,7 +117,8 @@ class EditTaskWindow(TaskWindow):
         custom_builder = common.new_gtk_builder()
         super(EditTaskWindow, self).__init__(task_stack_indicator, custom_builder)
         self.accept_button.connect('clicked',  lambda widget: GLib.idle_add(self.task_stack_indicator.update_task, task[common.ID], self.summary_entry.get_text(), self.description_buffer.get_text(self.description_buffer.get_start_iter(), self.description_buffer.get_end_iter(), True)))
-        self.delete_button.connect('clicked',  lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task, task[common.ID]))
+        self.delete_button.connect('clicked',  lambda widget: GLib.idle_add(self.task_stack_indicator.delete_task
+, task[common.ID]))
         self.upload_button.connect('clicked',  lambda widget: GLib.idle_add(self.upload_task))
         self.update_upload_button()
         self.summary_entry.set_text(task[common.SUMMARY])
