@@ -32,7 +32,7 @@ import logging
 import locale
 import gettext
 import pkg_resources
-from task_stack_indicator.windows import ConfigurationWindow
+from task_stack_indicator.windows import PreferencesWindow
 from task_stack_indicator.windows import CreateTaskWindow
 from task_stack_indicator.windows import EditTaskWindow
 from task_stack_indicator.windows import IssueFieldsTaskWindow
@@ -103,7 +103,7 @@ class Indicator(object):
         self.lock = Lock()
         self.edit_task_windows = {}
         self.create_task_window = CreateTaskWindow(self)
-        self.configuration_window = ConfigurationWindow(self)
+        self.configuration_window = PreferencesWindow(self)
         self.indicator.connect(
             'new-icon', lambda indicator: GLib.idle_add(self.update_menu))
         self.about_dialog = common.builder.get_object('about_dialog')

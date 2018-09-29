@@ -30,10 +30,10 @@ class TaskStackIndicatorWindow(object):
         self.window.connect("delete-event", lambda widget, event: widget.hide() or True)
         self.window.set_position(Gtk.WindowPosition.CENTER)
 
-class ConfigurationWindow(TaskStackIndicatorWindow):
+class PreferencesWindow(TaskStackIndicatorWindow):
 
     def __init__(self, task_stack_indicator):
-        super(ConfigurationWindow, self).__init__(task_stack_indicator, "config_window")
+        super(PreferencesWindow, self).__init__(task_stack_indicator, "config_window")
         self.cancel_button = self.builder.get_object("config_cancel_button")
         self.cancel_button.connect('clicked',  lambda widget: self.window.hide())
         self.accept_button = self.builder.get_object("config_accept_button")
