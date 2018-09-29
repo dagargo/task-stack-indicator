@@ -125,7 +125,8 @@ class EditTaskWindow(TaskWindow):
         self.upload_button.connect('clicked',  lambda widget: GLib.idle_add(self.upload_task))
         self.update_upload_button()
         self.summary_entry.set_text(task[common.SUMMARY])
-        self.description_buffer.set_text(task[common.DESCRIPTION])
+        if task[common.DESCRIPTION]:
+            self.description_buffer.set_text(task[common.DESCRIPTION])
 
     def update_upload_button(self):
         sensitive = self.task_stack_indicator.is_jira_enabled() and self.task_stack_indicator.projects and self.task_stack_indicator.issue_types
