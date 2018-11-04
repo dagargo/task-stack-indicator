@@ -33,7 +33,8 @@ class TaskStackIndicatorWindow(object):
 class PreferencesWindow(TaskStackIndicatorWindow):
 
     def __init__(self, task_stack_indicator):
-        super(PreferencesWindow, self).__init__(task_stack_indicator, "config_window")
+        custom_builder = common.new_gtk_builder()
+        super(PreferencesWindow, self).__init__(task_stack_indicator, "config_window", custom_builder)
         self.cancel_button = self.builder.get_object("config_cancel_button")
         self.cancel_button.connect('clicked',  lambda widget: self.window.hide())
         self.accept_button = self.builder.get_object("config_accept_button")
