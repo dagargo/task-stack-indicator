@@ -20,12 +20,14 @@ import requests
 from requests.exceptions import ConnectionError
 import json
 
+session = requests.Session()
+
 logger = logging.getLogger(__name__)
 
 def get_tasks(url, username, password, headers=None, verify=True):
     auth = (username, password)
     try:
-        response = requests.get(url, auth=auth, headers=headers, verify=verify)
+        response = session.get(url, auth=auth, headers=headers, verify=verify)
         if response.status_code == 200:
             return response.json()
         else:
@@ -40,7 +42,7 @@ def create_task(url, username, password, task, headers=None, verify=True):
     new_task = None
     try:
         data = json.dumps(task)
-        response = requests.post(url, auth=auth, headers=headers, data=data, verify=verify)
+        response = session.post(url, auth=auth, headers=headers, data=data, verify=verify)
         if response.status_code == 201:
             new_task = response.json()
         else:
@@ -54,7 +56,7 @@ def update_task(url, username, password, task, headers=None, verify=True):
     auth = (username, password)
     try:
         data = json.dumps(task)
-        response = requests.put(url, auth=auth, headers=headers, data=data, verify=verify)
+        response = session.put(url, auth=auth, headers=headers, data=data, verify=verify)
         if response.status_code != 200:
             raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:
@@ -64,7 +66,7 @@ def update_task(url, username, password, task, headers=None, verify=True):
 def delete_task(url, username, password, headers=None, verify=True):
     auth = (username, password)
     try:
-        response = requests.delete(url, auth=auth, headers=headers, verify=verify)
+        response = session.delete(url, auth=auth, headers=headers, verify=verify)
         if response.status_code != 200:
             raise RestException(response.status_code, response.reason, response.text)
     except ConnectionError as e:

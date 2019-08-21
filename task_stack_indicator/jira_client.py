@@ -39,13 +39,14 @@ class JiraClient(object):
     def __init__(self):
         self.pixbufs = {}
         self.lock = Lock()
+        self.session = requests.Session()
 
     def get_issues(self, jira_url, username, password, jql):
         issues = []
         jql_url = jira_url + "/rest/api/2/search?jql=" + jql
         auth = (username, password)
         try:
-            response = requests.get(jql_url, auth=auth, headers=headers)
+            response = self.session.get(jql_url, auth=auth, headers=headers)
             if response.status_code != 200:
                 raise RestException(response.status_code, response.reason, response.text)
             else:
@@ -68,7 +69,7 @@ class JiraClient(object):
                         with self.lock:
                             pixbuf = self.pixbufs.get(image_url)
                             if not pixbuf:
-                                response = requests.get(image_url)
+                                response = self.session.get(image_url)
                                 loader = GdkPixbuf.PixbufLoader()
                                 loader.write(response.content)
                                 loader.close()
@@ -87,7 +88,7 @@ class JiraClient(object):
         auth = (username, password)
         entity = None
         try:
-            response = requests.post(post_url, auth=auth, headers=headers, data=issue)
+            response = self.session.post(post_url, auth=auth, headers=headers, data=issue)
             if response.status_code != 201:
                 raise RestException(response.status_code, response.reason, response.text)
             else:
@@ -100,7 +101,7 @@ class JiraClient(object):
         items = []
         auth = (username, password)
         try:
-            response = requests.get(url, auth=auth, headers=headers)
+            response = self.session.get(url, auth=auth, headers=headers)
             if response.status_code != 200:
                 raise RestException(response.status_code, response.reason, response.text)
             else:
