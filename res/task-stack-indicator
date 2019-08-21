@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
 from task_stack_indicator.indicator import Indicator
+import signal
 
-Indicator().main()
+
+def quit(signum, frame):
+    indicator.exit()
+
+
+signal.signal(signal.SIGINT, quit)
+
+indicator = Indicator()
+indicator.main()
