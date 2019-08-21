@@ -1,5 +1,4 @@
-task-stack-indicator
-====================
+# task-stack-indicator
 
 task-stack-indicator is an application indicator that allows you to control your task stack.
 
@@ -13,13 +12,16 @@ Also, it offers integration with Atlassian JIRA and provides
 
 It is possible to connect to JIRA from behind a proxy by setting the environment variables http_proxy and https_proxy.
 
-Installation
-------------
+## Installation
 
-The package dependencies for Ubuntu are
-- libappindicator3-1,
-- python3.
+The package dependencies for Debian based distributions are:
+- make
+- python3
+- python3-setuptools
+- libappindicator3-1
+- gir1.2-appindicator3-0.1
+- gettext
 
-To install them, simply execute `sudo apt-get install libappindicator3-1 python3`.
+You can easily install them by running `sudo apt-get install make python3 python3-setuptools libappindicator3-1 gir1.2-appindicator3-0.1 gettext`.
 
-In Debian, `gir1.2-appindicator3-0.1` and `gettext` must be installed.
+To install task-stack-indicator simply run `make && sudo make install`.
