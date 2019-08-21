@@ -24,4 +24,6 @@ The package dependencies for Debian based distributions are:
 
 You can easily install them by running `sudo apt-get install make python3 python3-setuptools libappindicator3-1 gir1.2-appindicator3-0.1 gettext`.
 
+Also, you will need the [KStatusNotifierItem/AppIndicator Support](https://extensions.gnome.org/extension/615/appindicator-support/) GNOME 3 extension.
+
 To install task-stack-indicator simply run `make && sudo make install`.
