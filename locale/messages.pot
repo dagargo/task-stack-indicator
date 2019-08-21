@@ -1,87 +1,87 @@
-# Translations for task-stack-indicator.
-# Copyright (C) 2014 David García Goñi
-# This file is distributed under the same license as the task-stack-indicator package.
-# David García Goñi <dagargo@gmail.com>, 2014.
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: task-stack-indicator\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-08-23 23:16+0200\n"
-"PO-Revision-Date: 2019-08-21 18:20+0200\n"
-"Last-Translator: David García Goñi <dagargo@gmail.com>\n"
+"POT-Creation-Date: 2019-08-21 18:36+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: es\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: task_stack_indicator/resources/gui.glade:48
 msgid "Task"
-msgstr "Tarea"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:142
 msgid "Summary"
-msgstr "Resumen"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:166
 msgid "Description"
-msgstr "Descripción"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:215
 msgid "Jira Project and Issue Type"
-msgstr "Proyecto y Tipo de Asunto en Jira"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:281
 msgid "Jira Project"
-msgstr "Proyecto de Jira"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:293
 msgid "Jira Issue Type"
-msgstr "Tipo de Asunto de Jira"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:353
 msgid "Preferences"
-msgstr "Preferencias"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:427
 msgid "Remote URL"
-msgstr "URL remota"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:439
 #: task_stack_indicator/resources/gui.glade:590
 msgid "Password"
-msgstr "Contraseña"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:452
 msgid "Refresh Period"
-msgstr "Periodo de Refresco"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:516
 #: task_stack_indicator/resources/gui.glade:638
 msgid "Username"
-msgstr "Usuario"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:542
 msgid "Task Limit"
-msgstr "Límite de Tareas"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:555
 msgid "Tasks"
-msgstr "Tareas"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:578
 msgid "Jira URL"
-msgstr "URL de Jira"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:650
 msgid "Watching Days"
-msgstr "Días de Seguimiento"
+msgstr ""
 
 #: task_stack_indicator/resources/gui.glade:678
 msgid "Days to Due Date"
-msgstr "Días para Fecha de Fin"
+msgstr ""
 
 #: task_stack_indicator/indicator.py:211
 msgid "Tasks with due date in n days"
@@ -89,7 +89,7 @@ msgstr "Tareas con fecha de fin en {:d} días"
 
 #: task_stack_indicator/indicator.py:213
 msgid "Non planned tasks"
-msgstr "Tareas sin planificar"
+msgstr "Tareas no planificadas"
 
 #: task_stack_indicator/indicator.py:217
 msgid "Watched tasks updated in the last n days"

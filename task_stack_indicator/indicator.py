@@ -31,6 +31,7 @@ from os.path import exists
 import logging
 import locale
 import gettext
+from gettext import gettext as _
 import pkg_resources
 from task_stack_indicator.windows import PreferencesWindow
 from task_stack_indicator.windows import CreateTaskWindow
@@ -45,6 +46,9 @@ import sys
 import getopt
 
 APP_NAME = 'task-stack-indicator'
+locale.textdomain(APP_NAME)
+gettext.textdomain(APP_NAME)
+
 version = pkg_resources.get_distribution('TaskStackIndicator').version
 
 CONFIG_DIR = expanduser("~") + "/." + APP_NAME
@@ -53,8 +57,6 @@ if not exists(CONFIG_DIR):
 CONFIG_FILE = CONFIG_DIR + "/config"
 DATA_FILE = CONFIG_DIR + "/tasks"
 
-locale.textdomain(APP_NAME)
-_ = locale.gettext
 
 STATUS_ICON_FILE = 'task-stack-indicator-%d'
 

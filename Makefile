@@ -46,6 +46,10 @@ uninstall:
 		rm -f $$dest_dir/$(NAME).mo; \
 	done
 
+update_pot:
+	xgettext -L Glade task_stack_indicator/resources/gui.glade -o locale/messages.pot
+	xgettext -L Python task_stack_indicator/indicator.py --keyword=_ -j -o locale/messages.pot
+
 clean:
 	python3 setup.py clean --all
 	py3clean .

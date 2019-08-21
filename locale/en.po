@@ -1,7 +1,7 @@
 # Translations for task-stack-indicator.
 # Copyright (C) 2014 David García Goñi
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR dagargo at gmail.com, 2014.
+# This file is distributed under the same license as the task-stack-indicator package.
+# David García Goñi <dagargo@gmail.com>, 2014.
 #
 #, fuzzy
 msgid ""
@@ -9,75 +9,88 @@ msgstr ""
 "Project-Id-Version: task-stack-indicator\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-08-23 23:16+0200\n"
-"PO-Revision-Date: 2015-02-11 19:44+0100\n"
-"Last-Translator: David García Goñi <dagargo at gmail dot com>\n"
+"PO-Revision-Date: 2019-08-21 18:20+0200\n"
+"Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: gui.glade:8
+#: task_stack_indicator/resources/gui.glade:48
 msgid "Task"
 msgstr "Task"
 
-#: gui.glade:102
+#: task_stack_indicator/resources/gui.glade:142
 msgid "Summary"
 msgstr "Summary"
 
-#: gui.glade:126
+#: task_stack_indicator/resources/gui.glade:166
 msgid "Description"
 msgstr "Description"
 
-#: gui.glade:175
+#: task_stack_indicator/resources/gui.glade:215
 msgid "Jira Project and Issue Type"
 msgstr "Jira Project and Issue Type"
 
-#: gui.glade:241
+#: task_stack_indicator/resources/gui.glade:281
 msgid "Jira Project"
 msgstr "Jira Project"
 
-#: gui.glade:253
+#: task_stack_indicator/resources/gui.glade:293
 msgid "Jira Issue Type"
 msgstr "Jira Issue Type"
 
-#: gui.glade:313
+#: task_stack_indicator/resources/gui.glade:353
 msgid "Preferences"
 msgstr "Preferences"
 
-#: gui.glade:379
-msgid "Jira URL"
-msgstr "Jira URL"
+#: task_stack_indicator/resources/gui.glade:427
+msgid "Remote URL"
+msgstr "Remote URL"
 
-#: gui.glade:391
+#: task_stack_indicator/resources/gui.glade:439
+#: task_stack_indicator/resources/gui.glade:590
 msgid "Password"
 msgstr "Password"
 
-#: gui.glade:404
+#: task_stack_indicator/resources/gui.glade:452
 msgid "Refresh Period"
 msgstr "Refresh Period"
 
-#: gui.glade:467
+#: task_stack_indicator/resources/gui.glade:516
+#: task_stack_indicator/resources/gui.glade:638
 msgid "Username"
 msgstr "Username"
 
-#: gui.glade:479
-msgid "Watching Days"
-msgstr "Watching Days"
-
-#: gui.glade:506
-msgid "Days to Due Date"
-msgstr "Days to Due Date"
-
-#: gui.glade:546
+#: task_stack_indicator/resources/gui.glade:542
 msgid "Task Limit"
 msgstr "Task Limit"
 
+#: task_stack_indicator/resources/gui.glade:555
+msgid "Tasks"
+msgstr ""
+
+#: task_stack_indicator/resources/gui.glade:578
+msgid "Jira URL"
+msgstr "Jira URL"
+
+#: task_stack_indicator/resources/gui.glade:650
+msgid "Watching Days"
+msgstr "Watching Days"
+
+#: task_stack_indicator/resources/gui.glade:678
+msgid "Days to Due Date"
+msgstr "Days to Due Date"
+
+#: task_stack_indicator/indicator.py:211
 msgid "Tasks with due date in n days"
 msgstr "Tasks with due date in {:d} days"
 
+#: task_stack_indicator/indicator.py:213
 msgid "Non planned tasks"
-msgstr "Non planned tasks"
+msgstr ""
 
+#: task_stack_indicator/indicator.py:217
 msgid "Watched tasks updated in the last n days"
 msgstr "Watched tasks updated in the last {:d} days"
