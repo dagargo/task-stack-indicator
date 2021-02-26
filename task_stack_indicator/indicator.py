@@ -58,7 +58,7 @@ CONFIG_FILE = CONFIG_DIR + "/config"
 DATA_FILE = CONFIG_DIR + "/tasks"
 
 
-STATUS_ICON_FILE = 'task-stack-indicator-%d'
+STATUS_ICON_FILE = 'task-stack-indicator-%d-symbolic'
 
 
 def print_help():

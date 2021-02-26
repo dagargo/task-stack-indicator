@@ -13,8 +13,8 @@
    height="22"
    width="22"
    version="1.0"
-   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
-   sodipodi:docname="task-stack-indicator-5.svg">
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   sodipodi:docname="task-stack-indicator-0.svg">
   <defs
      id="defs5706" />
   <sodipodi:namedview
@@ -26,13 +26,13 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1280"
-     inkscape:window-height="773"
+     inkscape:window-width="1680"
+     inkscape:window-height="1023"
      id="namedview5704"
      showgrid="false"
      inkscape:zoom="24.772729"
-     inkscape:cx="11"
-     inkscape:cy="11"
+     inkscape:cx="9.3853212"
+     inkscape:cy="10.621963"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -45,7 +45,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
         <cc:license
            rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
         <dc:creator>
@@ -72,7 +72,7 @@
     </rdf:RDF>
   </metadata>
   <rect
-     style="opacity:0.4;fill:#dfdbd2;fill-opacity:1;stroke:none;stroke-width:1.21228337"
+     style="opacity:0.3;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1.21228337"
      id="rect5708"
      width="22"
      height="2.4228129"
@@ -81,7 +81,7 @@
      ry="1.2114065" />
   <rect
      rx="1.2295411"
-     style="opacity:0.4;fill:#dfdbd2;fill-opacity:1;stroke:none;stroke-width:1.21228337"
+     style="opacity:0.3;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1.21228337"
      id="rect5708-9-0"
      width="22"
      height="2.4228129"
@@ -90,7 +90,7 @@
      ry="1.2114065" />
   <rect
      rx="1.2295411"
-     style="opacity:0.4;fill:#dfdbd2;fill-opacity:1;stroke:none;stroke-width:1.21228337"
+     style="opacity:0.3;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1.21228337"
      id="rect5708-9-5"
      width="22"
      height="2.4228129"
@@ -99,7 +99,7 @@
      ry="1.2114065" />
   <rect
      rx="1.2295411"
-     style="opacity:0.4;fill:#dfdbd2;fill-opacity:1;stroke:none;stroke-width:1.21228337"
+     style="opacity:0.3;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1.21228337"
      id="rect5708-2-0"
      width="22"
      height="2.4228129"
@@ -108,7 +108,7 @@
      ry="1.2114065" />
   <rect
      rx="1.2295411"
-     style="opacity:0.4;fill:#dfdbd2;fill-opacity:1;stroke:none;stroke-width:1.21228337"
+     style="opacity:0.3;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1.21228337"
      id="rect5708-9-0-0-4"
      width="22"
      height="2.4228129"

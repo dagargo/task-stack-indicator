@@ -1,5 +1,5 @@
 NAME = task-stack-indicator
-ICONS_BASEDIR = /usr/share/icons
+ICONS_BASEDIR = /usr/local/share/icons
 ICONS_THEME_DIR = $(ICONS_BASEDIR)/hicolor
 ICONS_DIR = $(ICONS_THEME_DIR)/scalable/apps
 
@@ -12,15 +12,8 @@ install:
 	python3 setup.py install
 	cp res/$(NAME) /usr/local/bin
 	cp res/$(NAME).desktop /usr/share/applications
-	cp res/task-stack-indicator.svg $(ICONS_DIR)
-	cp res/gnome/* $(ICONS_DIR)
+	cp res/*.svg $(ICONS_DIR)
 	gtk-update-icon-cache -f -t  $(ICONS_THEME_DIR)
-	if [ -d $(ICONS_BASEDIR)/ubuntu-mono-dark ]; then \
-		cp res/dark/*  $(ICONS_BASEDIR)/ubuntu-mono-dark/status/22; \
-		cp res/light/* $(ICONS_BASEDIR)/ubuntu-mono-light/status/22; \
-		gtk-update-icon-cache -f -t  $(ICONS_BASEDIR)/ubuntu-mono-dark; \
-		gtk-update-icon-cache -f -t  $(ICONS_BASEDIR)/ubuntu-mono-light; \
-	fi
 	for po in locale/*.po; do \
 		locale=$${po%.*}; \
 		dest_dir="/usr/share/$$locale/LC_MESSAGES/"; \
@@ -34,12 +27,6 @@ uninstall:
 	rm -f $(ICONS_DIR)/task-stack-indicator.svg
 	rm -f $(ICONS_DIR)/task-stack-indicator-*.svg
 	gtk-update-icon-cache -f -t  $(ICONS_THEME_DIR)
-	if [ -d $(ICONS_BASEDIR)/ubuntu-mono-dark ]; then \
-		rm -f $(ICONS_BASEDIR)/ubuntu-mono-dark/status/22/task-stack-indicator-*.svg; \
-		rm -f $(ICONS_BASEDIR)/ubuntu-mono-light/status/22/task-stack-indicator-*.svg; \
-		gtk-update-icon-cache -f -t  $(ICONS_BASEDIR)/ubuntu-mono-dark; \
-		gtk-update-icon-cache -f -t  $(ICONS_BASEDIR)/ubuntu-mono-light; \
-	fi
 	for po in locale/*.po; do \
 		locale=$${po%.*}; \
 		dest_dir="/usr/share/$$locale/LC_MESSAGES/"; \
