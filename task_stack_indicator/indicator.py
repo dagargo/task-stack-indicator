@@ -15,9 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import gi
-gi.require_version('AppIndicator3', '0.1')
-from gi.repository import AppIndicator3 as AppIndicator
+
+try:
+    gi.require_version('AppIndicator3', '0.1')
+    from gi.repository import AppIndicator3 as AppIndicator
+except:
+    try:
+        gi.require_version('AyatanaAppIndicator3', '0.1')
+        from gi.repository import AyatanaAppIndicator3 as AppIndicator
+    except:
+        print ('No AppIndicator3 library found')
+        sys.exit(1)
+
 from gi.repository import Gtk
 from gi.repository import GLib
 from threading import Thread
@@ -42,7 +53,6 @@ import task_stack_indicator.jira_client as jira_client
 from task_stack_indicator.jira_client import JiraClient
 from task_stack_indicator.simple_rest_client import RestException
 import task_stack_indicator.simple_rest_client as src
-import sys
 import getopt
 
 APP_NAME = 'task-stack-indicator'
